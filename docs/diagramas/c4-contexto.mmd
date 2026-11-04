@@ -1,0 +1,30 @@
+%% C1 - Diagrama de Contexto (C4) - ClimaFit
+flowchart LR
+  subgraph usuarios["Usuarios de ClimaFit"]
+  alumno["<b>Alumno</b><br/>[Persona]<br/><br/>Consulta clases, se inscribe<br/>y recibe avisos por WhatsApp"]
+  profesor["<b>Profesor</b><br/>[Persona]<br/><br/>Crea clases y rutinas;<br/>decide sobre clases en riesgo"]
+  admin["<b>Administrador</b><br/>[Persona]<br/><br/>Gestiona actividades,<br/>criterios climáticos y espacios"]
+  end
+
+  climafit["<b>ClimaFit Backend</b><br/>[Sistema a desarrollar]<br/><br/>Gestiona clases deportivas al aire libre;<br/>evalúa el pronóstico, suspende,<br/>reprograma y notifica"]
+
+  keycloak["<b>Keycloak</b><br/>[Sistema externo - Identity Provider]<br/><br/>Autenticación OIDC,<br/>emisión de JWT y roles"]
+  openmeteo["<b>Open-Meteo</b><br/>[Sistema externo - API pública]<br/><br/>Pronóstico horario por coordenadas"]
+  twilio["<b>Twilio WhatsApp API</b><br/>[Sistema externo]<br/><br/>Envío de mensajes de WhatsApp"]
+
+  usuarios -- "Se autentican y obtienen JWT<br/>[OIDC]" --> keycloak
+  profesor -- "Gestiona clases y decide<br/>[HTTPS/JSON + JWT]" --> climafit
+  admin -- "Administra catálogo<br/>[HTTPS/JSON + JWT]" --> climafit
+  alumno -- "Consulta clases e inscribe<br/>[HTTPS/JSON + JWT]" --> climafit
+  climafit -- "Solicita envío de avisos<br/>[HTTPS/REST]" --> twilio
+  climafit -- "Valida JWT y obtiene<br/>token de servicio [OIDC]" --> keycloak
+  climafit -- "Consulta pronóstico<br/>[HTTPS/JSON]" --> openmeteo
+  twilio -. "Entrega mensajes<br/>[WhatsApp]" .-> alumno
+
+  classDef persona fill:#08427b,stroke:#052e56,color:#ffffff
+  classDef sistema fill:#1168bd,stroke:#0b4884,color:#ffffff
+  classDef externo fill:#999999,stroke:#6b6b6b,color:#ffffff
+  class alumno,profesor,admin persona
+  class climafit sistema
+  class keycloak,openmeteo,twilio externo
+  style usuarios fill:#ffffff,stroke:#08427b,stroke-dasharray: 5 5

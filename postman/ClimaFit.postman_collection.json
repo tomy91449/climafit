@@ -1,0 +1,2827 @@
+{
+  "info": {
+    "_postman_id": "ab2b8a89-24cc-4c80-8e9f-92b3ac146ec6",
+    "name": "ClimaFit - TPI Backend 2026",
+    "description": "Colección ejecutable de ClimaFit. Ejecutar con el Collection Runner en orden, con la solución levantada mediante docker compose (perfil demo). Las carpetas 05 a 08 recorren el proceso central. La URL base apunta al API Gateway.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "00 - Preparación",
+      "description": "Obtiene tokens de Keycloak para cada usuario de prueba, calcula fechas relativas y deja ms-clima en modo SIMULADO sin escenarios. Ejecutar siempre primero.",
+      "item": [
+        {
+          "name": "Token administrador",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                },
+                {
+                  "key": "client_id",
+                  "value": "{{clientId}}"
+                },
+                {
+                  "key": "username",
+                  "value": "{{adminUser}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{adminPass}}"
+                }
+              ]
+            },
+            "url": "{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Token obtenido\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"tokenAdmin\", pm.response.json().access_token);",
+                  "// Calcula fechas relativas en hora de Córdoba (UTC-3), redondeadas a la hora siguiente",
+                  "const H = 3600 * 1000;",
+                  "const p = n => String(n).padStart(2, \"0\");",
+                  "const fmt = d => { const l = new Date(d.getTime() - 3 * H); return `${l.getUTCFullYear()}-${p(l.getUTCMonth()+1)}-${p(l.getUTCDate())}T${p(l.getUTCHours())}:00:00`; };",
+                  "const base = new Date(Math.ceil(Date.now() / H) * H);",
+                  "const at = h => new Date(base.getTime() + h * H);",
+                  "const v = pm.collectionVariables;",
+                  "v.set(\"inicioA\", fmt(at(6)));  v.set(\"inicioA_mas1dia\", fmt(at(30)));",
+                  "v.set(\"simADesde\", fmt(at(5))); v.set(\"simAHasta\", fmt(at(7)));",
+                  "v.set(\"inicioB\", fmt(at(8)));  v.set(\"inicioB_mas1dia\", fmt(at(32)));",
+                  "v.set(\"simBDesde\", fmt(at(7))); v.set(\"simBHasta\", fmt(at(9)));",
+                  "v.set(\"inicioC\", fmt(at(10))); v.set(\"simCDesde\", fmt(at(9))); v.set(\"simCHasta\", fmt(at(10 + 24 * 8)));",
+                  "v.set(\"nuevoInicioC\", fmt(at(10 + 24 * 9)));",
+                  "v.set(\"pronDesde\", fmt(at(1))); v.set(\"pronHasta\", fmt(at(12)));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Token profesor 1",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                },
+                {
+                  "key": "client_id",
+                  "value": "{{clientId}}"
+                },
+                {
+                  "key": "username",
+                  "value": "{{profe1User}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{profe1Pass}}"
+                }
+              ]
+            },
+            "url": "{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Token obtenido\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"tokenProfe1\", pm.response.json().access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Token profesor 2",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                },
+                {
+                  "key": "client_id",
+                  "value": "{{clientId}}"
+                },
+                {
+                  "key": "username",
+                  "value": "{{profe2User}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{profe2Pass}}"
+                }
+              ]
+            },
+            "url": "{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Token obtenido\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"tokenProfe2\", pm.response.json().access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Token alumno 1",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                },
+                {
+                  "key": "client_id",
+                  "value": "{{clientId}}"
+                },
+                {
+                  "key": "username",
+                  "value": "{{alumno1User}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{alumno1Pass}}"
+                }
+              ]
+            },
+            "url": "{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Token obtenido\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"tokenAlumno1\", pm.response.json().access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Token alumno 2",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                },
+                {
+                  "key": "client_id",
+                  "value": "{{clientId}}"
+                },
+                {
+                  "key": "username",
+                  "value": "{{alumno2User}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{alumno2Pass}}"
+                }
+              ]
+            },
+            "url": "{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Token obtenido\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"tokenAlumno2\", pm.response.json().access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Token alumno 3",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "password"
+                },
+                {
+                  "key": "client_id",
+                  "value": "{{clientId}}"
+                },
+                {
+                  "key": "username",
+                  "value": "{{alumno3User}}"
+                },
+                {
+                  "key": "password",
+                  "value": "{{alumno3Pass}}"
+                }
+              ]
+            },
+            "url": "{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Token obtenido\", () => pm.response.to.have.status(200));",
+                  "pm.collectionVariables.set(\"tokenAlumno3\", pm.response.json().access_token);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Poner ms-clima en modo SIMULADO",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clima/modo",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modo\": \"SIMULADO\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Limpiar escenarios simulados",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/clima/escenarios",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "01 - Seguridad",
+      "description": "Verifica el Security Filter del gateway y la autorización por rol (F01, RN05).",
+      "item": [
+        {
+          "name": "Sin token: listar actividades -> 401",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actividades",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Token inválido -> 401",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer eyJhbGciOiJSUzI1NiJ9.token.alterado"
+              }
+            ],
+            "url": "{{baseUrl}}/actividades",
+            "auth": {
+              "type": "noauth"
+            },
+            "description": "Enviar un token alterado."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alumno crea tipo de actividad -> 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/actividades",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Crossfit\",\n  \"descripcion\": \"x\",\n  \"probLluviaMax\": 30,\n  \"vientoMaxKmh\": 30,\n  \"tempMinC\": 5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ruta interna no expuesta por el gateway -> 404",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/internal/notificaciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alumno lista actividades -> 200",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actividades",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Hay actividades precargadas\", () => pm.expect(pm.response.json().length).to.be.above(0));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 - Catálogo (ms-actividades)",
+      "description": "Tipos de actividad con criterios climáticos, espacios y ejercicios (F02, F03, F04, RN08).",
+      "item": [
+        {
+          "name": "Admin registra tipo de actividad -> 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/actividades",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Pilates\",\n  \"descripcion\": \"Pilates de suelo al aire libre\",\n  \"probLluviaMax\": 20,\n  \"vientoMaxKmh\": 25,\n  \"tempMinC\": 12\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"actPilates\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Criterios inválidos -> 400",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/actividades",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Invalida\",\n  \"descripcion\": \"x\",\n  \"probLluviaMax\": 150,\n  \"vientoMaxKmh\": -5,\n  \"tempMinC\": 5\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Código de error DATOS_INVALIDOS\", () => pm.expect(pm.response.json().codigo).to.eql(\"DATOS_INVALIDOS\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar tipo de actividad Yoga",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/actividades/{{actYoga}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Tiene criterios climáticos\", () => pm.expect(pm.response.json()).to.have.property(\"probLluviaMax\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin registra espacio -> 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/espacios",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Costanera Río Suquía\",\n  \"direccion\": \"Costanera y Av. Poeta Lugones\",\n  \"latitud\": -31.4135,\n  \"longitud\": -64.1811,\n  \"alAireLibre\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar espacios",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/espacios",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profesor 1 crea ejercicio personalizado -> 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/ejercicios",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Respiración en parque\",\n  \"descripcion\": \"Respiración diafragmática de pie, 3 minutos\",\n  \"nivel\": \"INICIAL\",\n  \"actividadesCompatibles\": [\n    {{actYoga}}\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"ejPersonal\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profesor 2 consulta ejercicio ajeno -> 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/ejercicios/{{ejPersonal}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe2}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 404\", () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Listar ejercicios compatibles con Yoga",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/ejercicios?actividadId={{actYoga}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profesor 1 da de baja su ejercicio -> 204",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": "{{baseUrl}}/ejercicios/{{ejPersonal}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 204\", () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "03 - Contactos (ms-notificaciones)",
+      "description": "Teléfono y consentimiento para WhatsApp (F10, RN14). alumno2 no acepta WhatsApp para verificar notificaciones OMITIDAS.",
+      "item": [
+        {
+          "name": "Alumno 1 acepta WhatsApp",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/contactos/mio",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telefono\": \"{{telefonoPrueba}}\",\n  \"aceptaWhatsapp\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alumno 2 NO acepta WhatsApp",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/contactos/mio",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno2}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telefono\": \"+5493510000002\",\n  \"aceptaWhatsapp\": false\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alumno 3 acepta WhatsApp",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/contactos/mio",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno3}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telefono\": \"{{telefonoPrueba}}\",\n  \"aceptaWhatsapp\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profesor 1 acepta WhatsApp (alertas)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/contactos/mio",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telefono\": \"{{telefonoPrueba}}\",\n  \"aceptaWhatsapp\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Teléfono inválido -> 400",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/contactos/mio",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telefono\": \"123\",\n  \"aceptaWhatsapp\": true\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 400\", () => pm.response.to.have.status(400));",
+                  "pm.test(\"Código de error DATOS_INVALIDOS\", () => pm.expect(pm.response.json().codigo).to.eql(\"DATOS_INVALIDOS\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar mis preferencias",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/contactos/mio",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Acepta WhatsApp\", () => pm.expect(pm.response.json().aceptaWhatsapp).to.eql(true));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "04 - Clases e inscripciones (ms-clases)",
+      "description": "Creación de clases con rutina y reglas de inscripción (F05, F08, F09, RN01, RN02, RN03, RN04, RN07). Crea las clases A, B y C (profesor 1, al aire libre) y E (profesor 2, techada).",
+      "item": [
+        {
+          "name": "Profesor 1 crea clase A (Yoga, Parque Sarmiento, cupo 2) -> 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clases",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipoActividadId\": {{actYoga}},\n  \"espacioId\": {{espSarmiento}},\n  \"inicio\": \"{{inicioA}}\",\n  \"duracionMinutos\": 60,\n  \"cupo\": 2,\n  \"rutina\": [\n    {\n      \"ejercicioId\": {{ejSaludoSol}},\n      \"orden\": 1,\n      \"indicaciones\": \"5 repeticiones\"\n    },\n    {\n      \"ejercicioId\": {{ejArbol}},\n      \"orden\": 2,\n      \"indicaciones\": \"30 segundos por lado\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"claseA\", pm.response.json().id);",
+                  "pm.test(\"Estado PROGRAMADA\", () => pm.expect(pm.response.json().estado).to.eql(\"PROGRAMADA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ejercicio incompatible con la actividad -> 422",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clases",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipoActividadId\": {{actYoga}},\n  \"espacioId\": {{espSarmiento}},\n  \"inicio\": \"{{inicioB}}\",\n  \"duracionMinutos\": 60,\n  \"cupo\": 2,\n  \"rutina\": [\n    {\n      \"ejercicioId\": {{ejBurpees}},\n      \"orden\": 1,\n      \"indicaciones\": \"10\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 422\", () => pm.response.to.have.status(422));",
+                  "pm.test(\"Código de error EJERCICIO_INCOMPATIBLE\", () => pm.expect(pm.response.json().codigo).to.eql(\"EJERCICIO_INCOMPATIBLE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profesor 1 crea otra clase en el mismo horario -> 409",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clases",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipoActividadId\": {{actYoga}},\n  \"espacioId\": {{espTejas}},\n  \"inicio\": \"{{inicioA}}\",\n  \"duracionMinutos\": 60,\n  \"cupo\": 2,\n  \"rutina\": [\n    {\n      \"ejercicioId\": {{ejSaludoSol}},\n      \"orden\": 1,\n      \"indicaciones\": \"5 repeticiones\"\n    },\n    {\n      \"ejercicioId\": {{ejArbol}},\n      \"orden\": 2,\n      \"indicaciones\": \"30 segundos por lado\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Código de error SUPERPOSICION_PROFESOR\", () => pm.expect(pm.response.json().codigo).to.eql(\"SUPERPOSICION_PROFESOR\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alumno intenta crear clase -> 403",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clases",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipoActividadId\": {{actYoga}},\n  \"espacioId\": {{espSarmiento}},\n  \"inicio\": \"{{inicioA}}\",\n  \"duracionMinutos\": 60,\n  \"cupo\": 2,\n  \"rutina\": [\n    {\n      \"ejercicioId\": {{ejSaludoSol}},\n      \"orden\": 1,\n      \"indicaciones\": \"5 repeticiones\"\n    },\n    {\n      \"ejercicioId\": {{ejArbol}},\n      \"orden\": 2,\n      \"indicaciones\": \"30 segundos por lado\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profesor 1 crea clase B (Yoga, Parque Sarmiento) -> 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clases",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipoActividadId\": {{actYoga}},\n  \"espacioId\": {{espSarmiento}},\n  \"inicio\": \"{{inicioB}}\",\n  \"duracionMinutos\": 60,\n  \"cupo\": 10,\n  \"rutina\": [\n    {\n      \"ejercicioId\": {{ejSaludoSol}},\n      \"orden\": 1,\n      \"indicaciones\": \"5 repeticiones\"\n    },\n    {\n      \"ejercicioId\": {{ejArbol}},\n      \"orden\": 2,\n      \"indicaciones\": \"30 segundos por lado\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"claseB\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profesor 1 crea clase C (Running, Parque de las Tejas) -> 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clases",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipoActividadId\": {{actRunning}},\n  \"espacioId\": {{espTejas}},\n  \"inicio\": \"{{inicioC}}\",\n  \"duracionMinutos\": 60,\n  \"cupo\": 10,\n  \"rutina\": [\n    {\n      \"ejercicioId\": {{ejTrote}},\n      \"orden\": 1,\n      \"indicaciones\": \"30 minutos a ritmo suave\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"claseC\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profesor 2 crea clase E (Funcional, Gimnasio techado, mismo horario que A) -> 201",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clases",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe2}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tipoActividadId\": {{actFuncional}},\n  \"espacioId\": {{espGimnasio}},\n  \"inicio\": \"{{inicioA}}\",\n  \"duracionMinutos\": 60,\n  \"cupo\": 10,\n  \"rutina\": [\n    {\n      \"ejercicioId\": {{ejBurpees}},\n      \"orden\": 1,\n      \"indicaciones\": \"3 x 10\"\n    },\n    {\n      \"ejercicioId\": {{ejSentadillas}},\n      \"orden\": 2,\n      \"indicaciones\": \"3 x 15\"\n    }\n  ]\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"claseE\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alumno consulta clases disponibles",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clases?actividadId={{actYoga}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alumno 1 se inscribe en A -> 201",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/clases/{{claseA}}/inscripciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.test(\"Estado ACTIVA\", () => pm.expect(pm.response.json().estado).to.eql(\"ACTIVA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alumno 2 se inscribe en A -> 201",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/clases/{{claseA}}/inscripciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno2}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alumno 3 se inscribe en A con cupo completo -> 409",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/clases/{{claseA}}/inscripciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno3}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Código de error CUPO_COMPLETO\", () => pm.expect(pm.response.json().codigo).to.eql(\"CUPO_COMPLETO\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alumno 1 se inscribe en E (superpuesta con A) -> 409",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/clases/{{claseE}}/inscripciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Código de error SUPERPOSICION_ALUMNO\", () => pm.expect(pm.response.json().codigo).to.eql(\"SUPERPOSICION_ALUMNO\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alumno 3 se inscribe en B -> 201",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/clases/{{claseB}}/inscripciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno3}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alumno 3 se inscribe en C -> 201",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/clases/{{claseC}}/inscripciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno3}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set(\"inscripcionA3C\", pm.response.json().id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alumno 3 cancela su inscripción en C -> 200",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": "{{baseUrl}}/inscripciones/{{inscripcionA3C}}/cancelacion",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno3}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Estado CANCELADA\", () => pm.expect(pm.response.json().estado).to.eql(\"CANCELADA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alumno 1 se inscribe en C -> 201",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/clases/{{claseC}}/inscripciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alumno 1 consulta sus inscripciones",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/inscripciones/mias",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Tiene 2 inscripciones activas\", () => pm.expect(pm.response.json().filter(i => i.estado === \"ACTIVA\").length).to.eql(2));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "05 - Proceso: falla del servicio de clima",
+      "description": "RN16: si el servicio de clima falla, la evaluación queda FALLIDA y la clase no cambia.",
+      "item": [
+        {
+          "name": "Simular caída del proveedor de clima",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clima/modo",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modo\": \"FALLA\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Evaluar clase A -> FALLIDA",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/clases/{{claseA}}/evaluaciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Estado FALLIDA\", () => pm.expect(pm.response.json().resultado).to.eql(\"FALLIDA\"));",
+                  "pm.test(\"Estado PROGRAMADA\", () => pm.expect(pm.response.json().estadoClase).to.eql(\"PROGRAMADA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Clase A sigue PROGRAMADA",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clases/{{claseA}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Estado PROGRAMADA\", () => pm.expect(pm.response.json().estado).to.eql(\"PROGRAMADA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Restaurar modo SIMULADO",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clima/modo",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modo\": \"SIMULADO\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "06 - Proceso: NO_APTA y reprogramación automática",
+      "description": "Proceso central completo (P1-P8): lluvia sobre la clase A -> SUSPENDIDA -> REPROGRAMADA al día siguiente -> notificaciones (F11, F13, F14, F15, RN10, RN11, RN13, RN14).",
+      "item": [
+        {
+          "name": "Escenario: 90% de lluvia en Parque Sarmiento durante la clase A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clima/escenarios",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitud\": {{latSarmiento}},\n  \"longitud\": {{lonSarmiento}},\n  \"desde\": \"{{simADesde}}\",\n  \"hasta\": \"{{simAHasta}}\",\n  \"probLluvia\": 90,\n  \"vientoKmh\": 10,\n  \"temperaturaC\": 18,\n  \"tormenta\": false\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Evaluar clase A -> NO_APTA y REPROGRAMADA",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/clases/{{claseA}}/evaluaciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Estado NO_APTA\", () => pm.expect(pm.response.json().resultado).to.eql(\"NO_APTA\"));",
+                  "pm.test(\"Estado REPROGRAMADA\", () => pm.expect(pm.response.json().estadoClase).to.eql(\"REPROGRAMADA\"));",
+                  "pm.test(\"Nueva fecha: mismo horario del día siguiente\", () => pm.expect(pm.response.json().nuevoInicio).to.include(pm.collectionVariables.get(\"inicioA_mas1dia\")));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar clase A",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clases/{{claseA}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Estado REPROGRAMADA\", () => pm.expect(pm.response.json().estado).to.eql(\"REPROGRAMADA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Inscripciones de A siguen activas en la nueva fecha",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clases/{{claseA}}/inscripciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"2 inscripciones activas\", () => pm.expect(pm.response.json().filter(i => i.estado === \"ACTIVA\").length).to.eql(2));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Historial de estados de A",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clases/{{claseA}}/historial",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const h = pm.response.json().map(c => c.estadoNuevo);",
+                  "pm.test(\"Pasó por SUSPENDIDA y REPROGRAMADA\", () => { pm.expect(h).to.include(\"SUSPENDIDA\"); pm.expect(h).to.include(\"REPROGRAMADA\"); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Notificaciones de A: una ENVIADA y una OMITIDA",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/notificaciones?claseId={{claseA}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Las notificaciones se envían de forma asincrónica: esperar 3 s",
+                  "setTimeout(() => {}, 3000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const n = pm.response.json();",
+                  "pm.test(\"Alumno 1 notificado\", () => pm.expect(n.some(x => x.estado === \"ENVIADA\")).to.be.true);",
+                  "pm.test(\"Alumno 2 OMITIDA (no aceptó WhatsApp)\", () => pm.expect(n.some(x => x.estado === \"OMITIDA\")).to.be.true);",
+                  "pm.test(\"Sin duplicados por alumno\", () => { const k = n.map(x => x.eventoId + x.usuarioId); pm.expect(new Set(k).size).to.eql(k.length); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Evaluaciones climáticas registradas de A",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clases/{{claseA}}/evaluaciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "07 - Proceso: EN_RIESGO y decisión del profesor",
+      "description": "Viento cercano al límite de Yoga (25 km/h) -> EN_RIESGO; el profesor decide suspender (F12, RN05, RN10, RN12).",
+      "item": [
+        {
+          "name": "Escenario: viento de 20 km/h durante la clase B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clima/escenarios",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitud\": {{latSarmiento}},\n  \"longitud\": {{lonSarmiento}},\n  \"desde\": \"{{simBDesde}}\",\n  \"hasta\": \"{{simBHasta}}\",\n  \"probLluvia\": 0,\n  \"vientoKmh\": 20,\n  \"temperaturaC\": 20,\n  \"tormenta\": false\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Evaluar clase B -> EN_RIESGO",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/clases/{{claseB}}/evaluaciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Estado EN_RIESGO\", () => pm.expect(pm.response.json().resultado).to.eql(\"EN_RIESGO\"));",
+                  "pm.test(\"Estado EN_RIESGO\", () => pm.expect(pm.response.json().estadoClase).to.eql(\"EN_RIESGO\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profesor 2 decide sobre clase ajena -> 403",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clases/{{claseB}}/decision-riesgo",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe2}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"SUSPENDER\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profesor 1 suspende la clase B -> REPROGRAMADA",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clases/{{claseB}}/decision-riesgo",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"SUSPENDER\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Estado REPROGRAMADA\", () => pm.expect(pm.response.json().estado).to.eql(\"REPROGRAMADA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Notificaciones de B (alerta al profesor y aviso al alumno 3)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/notificaciones?claseId={{claseB}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Las notificaciones se envían de forma asincrónica: esperar 3 s",
+                  "setTimeout(() => {}, 3000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const n = pm.response.json();",
+                  "pm.test(\"Hay alerta de riesgo\", () => pm.expect(n.some(x => x.tipo === \"ALERTA_RIESGO\")).to.be.true);",
+                  "pm.test(\"Hay aviso de reprogramación\", () => pm.expect(n.some(x => x.tipo === \"REPROGRAMACION\")).to.be.true);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "08 - Proceso: sin día viable y reagenda manual",
+      "description": "Lluvia durante 8 días en Parque de las Tejas -> SUSPENDIDA_SIN_FECHA; el profesor reagenda (F06, F13, RN13).",
+      "item": [
+        {
+          "name": "Escenario: 95% de lluvia en Parque de las Tejas por 8 días",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clima/escenarios",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"latitud\": {{latTejas}},\n  \"longitud\": {{lonTejas}},\n  \"desde\": \"{{simCDesde}}\",\n  \"hasta\": \"{{simCHasta}}\",\n  \"probLluvia\": 95,\n  \"vientoKmh\": 15,\n  \"temperaturaC\": 16,\n  \"tormenta\": false\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 201\", () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Evaluar clase C -> SUSPENDIDA_SIN_FECHA",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/clases/{{claseC}}/evaluaciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Estado NO_APTA\", () => pm.expect(pm.response.json().resultado).to.eql(\"NO_APTA\"));",
+                  "pm.test(\"Estado SUSPENDIDA_SIN_FECHA\", () => pm.expect(pm.response.json().estadoClase).to.eql(\"SUSPENDIDA_SIN_FECHA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profesor 1 reagenda la clase C -> REPROGRAMADA",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clases/{{claseC}}/reprogramacion",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nuevoInicio\": \"{{nuevoInicioC}}\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Estado REPROGRAMADA\", () => pm.expect(pm.response.json().estado).to.eql(\"REPROGRAMADA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Notificaciones de C (sin fecha y reprogramación)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/notificaciones?claseId={{claseC}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Las notificaciones se envían de forma asincrónica: esperar 3 s",
+                  "setTimeout(() => {}, 3000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "const n = pm.response.json();",
+                  "pm.test(\"Aviso de suspensión sin fecha\", () => pm.expect(n.some(x => x.tipo === \"SIN_FECHA\")).to.be.true);",
+                  "pm.test(\"Aviso de reprogramación\", () => pm.expect(n.some(x => x.tipo === \"REPROGRAMACION\")).to.be.true);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "09 - Otras reglas y cancelación",
+      "description": "Clases techadas, autorización sobre la clase y cancelación (F07, RN02, RN05, RN06, RN09, RN12).",
+      "item": [
+        {
+          "name": "Evaluar clase techada E -> 409",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/clases/{{claseE}}/evaluaciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe2}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Código de error CLASE_NO_EVALUABLE\", () => pm.expect(pm.response.json().codigo).to.eql(\"CLASE_NO_EVALUABLE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Decidir riesgo sobre clase que no está en riesgo -> 409",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clases/{{claseA}}/decision-riesgo",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"decision\": \"MANTENER\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Código de error CLASE_NO_EN_RIESGO\", () => pm.expect(pm.response.json().codigo).to.eql(\"CLASE_NO_EN_RIESGO\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profesor 1 cancela clase de profesor 2 -> 403",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clases/{{claseE}}/cancelacion",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Prueba\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 403\", () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profesor 2 cancela su clase E -> 200",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clases/{{claseE}}/cancelacion",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe2}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Gimnasio en mantenimiento\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Estado CANCELADA\", () => pm.expect(pm.response.json().estado).to.eql(\"CANCELADA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Alumno se inscribe en clase cancelada -> 409",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/clases/{{claseE}}/inscripciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno2}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 409\", () => pm.response.to.have.status(409));",
+                  "pm.test(\"Código de error CLASE_NO_DISPONIBLE\", () => pm.expect(pm.response.json().codigo).to.eql(\"CLASE_NO_DISPONIBLE\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Ejecutar evaluación general (equivale a la tarea programada)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/clases/evaluaciones",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "10 - Integración real con Open-Meteo",
+      "description": "Cambia ms-clima a modo REAL y consulta el pronóstico real del Parque Sarmiento. Requiere acceso a Internet.",
+      "item": [
+        {
+          "name": "Poner ms-clima en modo REAL",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clima/modo",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modo\": \"REAL\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Consultar pronóstico real del Parque Sarmiento",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clima/pronostico?latitud={{latSarmiento}}&longitud={{lonSarmiento}}&desde={{pronDesde}}&hasta={{pronHasta}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Devuelve horas de pronóstico\", () => pm.expect(pm.response.json().horas.length).to.be.above(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Volver a modo SIMULADO",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clima/modo",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAdmin}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"modo\": \"SIMULADO\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "tokenAdmin",
+      "value": ""
+    },
+    {
+      "key": "tokenProfe1",
+      "value": ""
+    },
+    {
+      "key": "tokenProfe2",
+      "value": ""
+    },
+    {
+      "key": "tokenAlumno1",
+      "value": ""
+    },
+    {
+      "key": "tokenAlumno2",
+      "value": ""
+    },
+    {
+      "key": "tokenAlumno3",
+      "value": ""
+    },
+    {
+      "key": "claseA",
+      "value": ""
+    },
+    {
+      "key": "claseB",
+      "value": ""
+    },
+    {
+      "key": "claseC",
+      "value": ""
+    },
+    {
+      "key": "claseE",
+      "value": ""
+    },
+    {
+      "key": "inscripcionA3C",
+      "value": ""
+    },
+    {
+      "key": "actPilates",
+      "value": ""
+    },
+    {
+      "key": "ejPersonal",
+      "value": ""
+    },
+    {
+      "key": "inicioA",
+      "value": ""
+    },
+    {
+      "key": "inicioA_mas1dia",
+      "value": ""
+    },
+    {
+      "key": "simADesde",
+      "value": ""
+    },
+    {
+      "key": "simAHasta",
+      "value": ""
+    },
+    {
+      "key": "inicioB",
+      "value": ""
+    },
+    {
+      "key": "inicioB_mas1dia",
+      "value": ""
+    },
+    {
+      "key": "simBDesde",
+      "value": ""
+    },
+    {
+      "key": "simBHasta",
+      "value": ""
+    },
+    {
+      "key": "inicioC",
+      "value": ""
+    },
+    {
+      "key": "simCDesde",
+      "value": ""
+    },
+    {
+      "key": "simCHasta",
+      "value": ""
+    },
+    {
+      "key": "nuevoInicioC",
+      "value": ""
+    },
+    {
+      "key": "pronDesde",
+      "value": ""
+    },
+    {
+      "key": "pronHasta",
+      "value": ""
+    }
+  ]
+}

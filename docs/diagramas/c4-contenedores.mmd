@@ -1,0 +1,59 @@
+---
+config:
+  layout: elk
+---
+%% C2 - Diagrama de Contenedores (C4) - ClimaFit
+flowchart LR
+  usuarios["<b>Usuarios</b><br/>[Personas]<br/><br/>Alumno, Profesor, Administrador<br/>(cliente: Postman / Bruno)"]
+
+  subgraph sistema["ClimaFit Backend [Sistema - Docker Compose]"]
+    gateway["<b>API Gateway</b><br/>[Spring Cloud Gateway]<br/><br/>Punto de entrada único;<br/>Security Filter: valida JWT y rol por ruta;<br/>enruta y bloquea /internal/**"]
+    actividades["<b>ms-actividades</b><br/>[Java 21 · Spring Boot]<br/><br/>Tipos de actividad y criterios climáticos,<br/>espacios y ejercicios"]
+    clases["<b>ms-clases</b><br/>[Java 21 · Spring Boot]<br/><br/>Clases, rutinas, inscripciones, estados,<br/>historial; orquesta evaluación y reprogramación<br/>(tarea programada)"]
+    clima["<b>ms-clima</b><br/>[Java 21 · Spring Boot]<br/><br/>Consulta y cachea el pronóstico;<br/>evalúa criterios: APTA / EN_RIESGO / NO_APTA<br/>(perfil demo con escenarios simulados)"]
+    notificaciones["<b>ms-notificaciones</b><br/>[Java 21 · Spring Boot]<br/><br/>Contactos y consentimiento,<br/>envío de WhatsApp con reintentos,<br/>registro de notificaciones"]
+    commons[["<b>climafit-commons</b><br/>[JAR Maven]<br/><br/>Errores, seguridad, correlation id,<br/>cliente HTTP con timeout y reintento"]]
+    db[("<b>PostgreSQL</b><br/>[DBMS · contenedor único]<br/><br/>actividades_db · clases_db<br/>notificaciones_db · keycloak_db")]
+    keycloak["<b>Keycloak</b><br/>[Identity Provider · contenedor]<br/><br/>Realm climafit: usuarios, roles,<br/>clientes OIDC; emite JWT"]
+  end
+
+  openmeteo["<b>Open-Meteo</b><br/>[API pública externa]<br/><br/>Pronóstico horario"]
+  twilio["<b>Twilio WhatsApp API</b><br/>[Sistema externo]<br/><br/>Mensajería WhatsApp"]
+
+  usuarios -- "Obtiene token<br/>[OIDC]" --> keycloak
+  usuarios -- "Solicitudes REST + JWT<br/>[HTTPS/JSON]" --> gateway
+  gateway -- "Obtiene claves públicas<br/>[JWKS]" --> keycloak
+  gateway -- "/api/actividades, /espacios, /ejercicios<br/>[HTTP/JSON]" --> actividades
+  gateway -- "/api/clases, /inscripciones<br/>[HTTP/JSON]" --> clases
+  gateway -- "/api/clima<br/>[HTTP/JSON]" --> clima
+  gateway -- "/api/contactos, /notificaciones<br/>[HTTP/JSON]" --> notificaciones
+
+  clases -- "Criterios, espacio,<br/>compatibilidad de ejercicios<br/>[REST + JWT]" --> actividades
+  clases -- "Evalúa ventanas horarias<br/>[REST + JWT, /internal]" --> clima
+  clases -- "Solicita notificación de evento<br/>[REST + JWT, /internal]" --> notificaciones
+  clases -- "Token de servicio<br/>(client credentials)" --> keycloak
+
+  actividades -- "JPA/JDBC" --> db
+  clases -- "JPA/JDBC" --> db
+  notificaciones -- "JPA/JDBC" --> db
+  keycloak -- "JDBC" --> db
+
+  clima -- "Consulta pronóstico<br/>[HTTPS/JSON]" --> openmeteo
+  notificaciones -- "Envía mensajes<br/>[HTTPS/REST]" --> twilio
+
+  actividades -.->|"dependencia Maven"| commons
+  clases -.->|"dependencia Maven"| commons
+  clima -.->|"dependencia Maven"| commons
+  notificaciones -.->|"dependencia Maven"| commons
+
+  classDef persona fill:#08427b,stroke:#052e56,color:#ffffff
+  classDef contenedor fill:#438dd5,stroke:#2e6295,color:#ffffff
+  classDef infra fill:#2f6f9f,stroke:#1f4f73,color:#ffffff
+  classDef libreria fill:#85bbf0,stroke:#5d82a8,color:#0b2540
+  classDef externo fill:#999999,stroke:#6b6b6b,color:#ffffff
+  class usuarios persona
+  class gateway,actividades,clases,clima,notificaciones contenedor
+  class db,keycloak infra
+  class commons libreria
+  class openmeteo,twilio externo
+  style sistema fill:#ffffff,stroke:#1168bd,stroke-dasharray: 5 5

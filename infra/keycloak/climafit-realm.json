@@ -1,0 +1,109 @@
+{
+  "realm": "climafit",
+  "enabled": true,
+  "displayName": "ClimaFit",
+  "accessTokenLifespan": 1800,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "roles": {
+    "realm": [
+      { "name": "ADMIN", "description": "Gestiona actividades, criterios climáticos, espacios y ejercicios base" },
+      { "name": "PROFESOR", "description": "Crea y gestiona sus clases, rutinas y ejercicios personalizados" },
+      { "name": "ALUMNO", "description": "Consulta clases, se inscribe y recibe avisos" },
+      { "name": "SERVICIO", "description": "Solo para la service account: llamadas entre microservicios (/internal/**)" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "climafit-api",
+      "name": "ClimaFit API (usuarios)",
+      "description": "Cliente público con el que los usuarios obtienen su token. El grant de contraseña está habilitado solo para pruebas con Postman.",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:8080/*"],
+      "webOrigins": ["+"]
+    },
+    {
+      "clientId": "climafit-servicios",
+      "name": "ClimaFit servicios internos",
+      "description": "Cliente confidencial: los microservicios obtienen un token con client credentials para llamarse entre sí.",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${CLIENTE_SERVICIOS_SECRET}",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true
+    }
+  ],
+  "users": [
+    {
+      "username": "admin1",
+      "enabled": true,
+      "firstName": "Ana",
+      "lastName": "Admin",
+      "email": "admin1@climafit.local",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "admin123", "temporary": false }],
+      "realmRoles": ["ADMIN"]
+    },
+    {
+      "username": "profe1",
+      "enabled": true,
+      "firstName": "Pablo",
+      "lastName": "Profesor",
+      "email": "profe1@climafit.local",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "profe123", "temporary": false }],
+      "realmRoles": ["PROFESOR"]
+    },
+    {
+      "username": "profe2",
+      "enabled": true,
+      "firstName": "Paula",
+      "lastName": "Profesora",
+      "email": "profe2@climafit.local",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "profe123", "temporary": false }],
+      "realmRoles": ["PROFESOR"]
+    },
+    {
+      "username": "alumno1",
+      "enabled": true,
+      "firstName": "Alan",
+      "lastName": "Alumno",
+      "email": "alumno1@climafit.local",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "alumno123", "temporary": false }],
+      "realmRoles": ["ALUMNO"]
+    },
+    {
+      "username": "alumno2",
+      "enabled": true,
+      "firstName": "Belen",
+      "lastName": "Alumna",
+      "email": "alumno2@climafit.local",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "alumno123", "temporary": false }],
+      "realmRoles": ["ALUMNO"]
+    },
+    {
+      "username": "alumno3",
+      "enabled": true,
+      "firstName": "Carlos",
+      "lastName": "Alumno",
+      "email": "alumno3@climafit.local",
+      "emailVerified": true,
+      "credentials": [{ "type": "password", "value": "alumno123", "temporary": false }],
+      "realmRoles": ["ALUMNO"]
+    },
+    {
+      "username": "service-account-climafit-servicios",
+      "enabled": true,
+      "serviceAccountClientId": "climafit-servicios",
+      "realmRoles": ["SERVICIO"]
+    }
+  ]
+}

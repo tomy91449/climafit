@@ -1,0 +1,29 @@
+%% DER - notificaciones_db (administrada por ms-notificaciones)
+erDiagram
+  CONTACTO {
+    varchar usuario_id PK "sub Keycloak"
+    varchar telefono "formato E.164"
+    boolean acepta_whatsapp
+    timestamp actualizado
+  }
+  EVENTO_NOTIFICACION {
+    varchar evento_id PK "generado por ms-clases"
+    varchar tipo "SUSPENSION, REPROGRAMACION, SIN_FECHA, CANCELACION, ALERTA_RIESGO"
+    bigint clase_id "ref. lógica a ms-clases"
+    varchar profesor_id
+    varchar mensaje
+    timestamp fecha_recepcion
+  }
+  NOTIFICACION {
+    bigint id PK
+    varchar evento_id FK "UK(evento_id, usuario_id)"
+    varchar usuario_id
+    varchar telefono
+    varchar estado "PENDIENTE, ENVIADA, OMITIDA, FALLIDA"
+    int intentos
+    varchar ultimo_error
+    varchar id_mensaje_proveedor
+    timestamp fecha_envio
+  }
+  EVENTO_NOTIFICACION ||--|{ NOTIFICACION : "genera"
+  CONTACTO |o--o{ NOTIFICACION : "destinatario"

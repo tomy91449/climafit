@@ -1,0 +1,152 @@
+# ClimaFit — despliegue completo.
+#   cp .env.example .env
+#   docker compose up -d --build
+#
+# Solo se publican al host el API Gateway (8080) y Keycloak (8090).
+# Los microservicios y PostgreSQL quedan en la red interna "climafit" (trusted zone).
+
+name: climafit
+
+x-servicio-spring: &servicio-spring
+  restart: unless-stopped
+  networks: [climafit]
+  environment: &env-spring
+    TZ: ${TZ}
+    SERVER_PORT: 8080
+    SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+    # Los tokens se piden en localhost:8090 (desde Postman) => ese es su emisor ("iss").
+    KEYCLOAK_ISSUER_URI: http://localhost:8090/realms/climafit
+    # Pero las claves públicas se descargan por la red interna de Docker.
+    KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/climafit/protocol/openid-connect/certs
+  healthcheck:
+    test: ["CMD", "curl", "-fs", "http://localhost:8080/actuator/health"]
+    interval: 10s
+    timeout: 5s
+    retries: 15
+    start_period: 30s
+
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      ACTIVIDADES_DB_PASSWORD: ${ACTIVIDADES_DB_PASSWORD}
+      CLASES_DB_PASSWORD: ${CLASES_DB_PASSWORD}
+      NOTIFICACIONES_DB_PASSWORD: ${NOTIFICACIONES_DB_PASSWORD}
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
+    # Publicado solo para desarrollo local (servicios corriendo desde el IDE).
+    ports: ["5432:5432"]
+    networks: [climafit]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4
+    command: ["start-dev", "--import-realm"]
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak_db
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      # Emisor fijo: el mismo "iss" tanto si el token se pide desde el host como desde Docker.
+      KC_HOSTNAME: http://localhost:8090
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_HEALTH_ENABLED: "true"
+      # Se reemplaza dentro del realm importado (${CLIENTE_SERVICIOS_SECRET}).
+      CLIENTE_SERVICIOS_SECRET: ${CLIENTE_SERVICIOS_SECRET}
+    volumes:
+      - ./infra/keycloak/climafit-realm.json:/opt/keycloak/data/import/climafit-realm.json:ro
+    ports: ["8090:8080"]
+    networks: [climafit]
+    depends_on:
+      postgres: { condition: service_healthy }
+    healthcheck:
+      # La imagen de Keycloak no trae curl: se hace el GET "a mano" con bash.
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/9000 && printf 'GET /health/ready HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && grep -q '\"UP\"' <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 30s
+
+  ms-actividades:
+    <<: *servicio-spring
+    build: { context: ., dockerfile: ms-actividades/Dockerfile }
+    environment:
+      <<: *env-spring
+      DB_URL: jdbc:postgresql://postgres:5432/actividades_db
+      DB_USER: actividades
+      DB_PASSWORD: ${ACTIVIDADES_DB_PASSWORD}
+    depends_on:
+      postgres: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
+
+  ms-clases:
+    <<: *servicio-spring
+    build: { context: ., dockerfile: ms-clases/Dockerfile }
+    environment:
+      <<: *env-spring
+      DB_URL: jdbc:postgresql://postgres:5432/clases_db
+      DB_USER: clases
+      DB_PASSWORD: ${CLASES_DB_PASSWORD}
+      CLIENTE_SERVICIOS_SECRET: ${CLIENTE_SERVICIOS_SECRET}
+    depends_on:
+      postgres: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
+
+  ms-clima:
+    <<: *servicio-spring
+    build: { context: ., dockerfile: ms-clima/Dockerfile }
+    depends_on:
+      keycloak: { condition: service_healthy }
+
+  ms-notificaciones:
+    <<: *servicio-spring
+    build: { context: ., dockerfile: ms-notificaciones/Dockerfile }
+    environment:
+      <<: *env-spring
+      DB_URL: jdbc:postgresql://postgres:5432/notificaciones_db
+      DB_USER: notificaciones
+      DB_PASSWORD: ${NOTIFICACIONES_DB_PASSWORD}
+      WHATSAPP_PROVEEDOR: ${WHATSAPP_PROVEEDOR}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
+      TWILIO_FROM: ${TWILIO_FROM}
+    depends_on:
+      postgres: { condition: service_healthy }
+      keycloak: { condition: service_healthy }
+
+  api-gateway:
+    <<: *servicio-spring
+    build: { context: ., dockerfile: api-gateway/Dockerfile }
+    environment:
+      <<: *env-spring
+      MS_ACTIVIDADES_URL: http://ms-actividades:8080
+      MS_CLASES_URL: http://ms-clases:8080
+      MS_CLIMA_URL: http://ms-clima:8080
+      MS_NOTIFICACIONES_URL: http://ms-notificaciones:8080
+    ports: ["8080:8080"]
+    depends_on:
+      keycloak: { condition: service_healthy }
+      ms-actividades: { condition: service_healthy }
+      ms-clases: { condition: service_healthy }
+      ms-clima: { condition: service_healthy }
+      ms-notificaciones: { condition: service_healthy }
+
+networks:
+  climafit:
+
+volumes:
+  postgres-data:

@@ -1,0 +1,38 @@
+# Los valores por defecto (después de ":") sirven para correr desde el IDE contra los
+# contenedores de infraestructura (docker compose up -d postgres keycloak).
+# En Docker Compose se pisan con variables de entorno.
+server:
+  # 8080 dentro del contenedor; desde el IDE se usa otro puerto para no chocar con el gateway.
+  port: ${SERVER_PORT:8083}
+  # Detrás del gateway: usa los headers X-Forwarded-* para armar URLs públicas (ej. el header Location).
+  forward-headers-strategy: framework
+
+spring:
+  application:
+    name: ms-clima
+  web:
+    # Mensajes de validación en español ("debe ser menor que o igual a 100")
+    locale: es_AR
+    locale-resolver: fixed
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # issuer-uri valida el claim "iss"; jwk-set-uri es de dónde se bajan las claves públicas.
+          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8090/realms/climafit}
+          jwk-set-uri: ${KEYCLOAK_JWKS_URI:http://localhost:8090/realms/climafit/protocol/openid-connect/certs}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+
+logging:
+  pattern:
+    # Cada línea de log incluye el correlation id de la solicitud (lo pone climafit-commons).
+    level: "%5p [${spring.application.name},%X{correlationId:-}]"
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs

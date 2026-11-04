@@ -1,0 +1,1 @@
+-- Las tablas de ms-notificaciones se agregan acá (ver docs/diagramas/der-notificaciones.mmd).

@@ -1,0 +1,34 @@
+%% DER - actividades_db (administrada por ms-actividades)
+erDiagram
+  TIPO_ACTIVIDAD {
+    bigint id PK
+    varchar nombre UK
+    varchar descripcion
+    int prob_lluvia_max "porcentaje 0-100"
+    int viento_max_kmh
+    int temp_min_c
+    boolean activo
+  }
+  ESPACIO {
+    bigint id PK
+    varchar nombre UK
+    varchar direccion
+    decimal latitud
+    decimal longitud
+    boolean al_aire_libre
+    boolean activo
+  }
+  EJERCICIO {
+    bigint id PK
+    varchar nombre
+    varchar descripcion
+    varchar nivel "INICIAL, INTERMEDIO, AVANZADO"
+    varchar propietario_id "sub Keycloak; NULL = ejercicio base"
+    boolean activo
+  }
+  EJERCICIO_ACTIVIDAD {
+    bigint ejercicio_id PK, FK
+    bigint tipo_actividad_id PK, FK
+  }
+  EJERCICIO ||--o{ EJERCICIO_ACTIVIDAD : "es compatible con"
+  TIPO_ACTIVIDAD ||--o{ EJERCICIO_ACTIVIDAD : "admite"

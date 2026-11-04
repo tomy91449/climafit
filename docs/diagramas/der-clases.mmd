@@ -1,0 +1,58 @@
+%% DER - clases_db (administrada por ms-clases)
+erDiagram
+  CLASE {
+    bigint id PK
+    bigint tipo_actividad_id "ref. lógica a ms-actividades"
+    bigint espacio_id "ref. lógica a ms-actividades"
+    boolean al_aire_libre "copia tomada al crear la clase"
+    varchar profesor_id "sub Keycloak"
+    timestamp inicio
+    int duracion_min
+    int cupo
+    varchar estado
+    varchar estado_previo "para volver desde EN_RIESGO"
+    bigint version "bloqueo optimista"
+  }
+  RUTINA_ITEM {
+    bigint id PK
+    bigint clase_id FK
+    bigint ejercicio_id "ref. lógica a ms-actividades"
+    int orden
+    varchar indicaciones
+  }
+  INSCRIPCION {
+    bigint id PK
+    bigint clase_id FK "UK(clase_id, alumno_id)"
+    varchar alumno_id "sub Keycloak"
+    varchar estado "ACTIVA, CANCELADA"
+    timestamp fecha_alta
+    timestamp fecha_baja
+  }
+  EVALUACION_CLIMATICA {
+    bigint id PK
+    bigint clase_id FK
+    timestamp fecha_evaluacion
+    timestamp inicio_evaluado
+    varchar resultado "APTA, EN_RIESGO, NO_APTA, FALLIDA"
+    varchar motivo
+    int prob_lluvia
+    int viento_kmh
+    int temperatura_c
+    boolean tormenta
+  }
+  CAMBIO_ESTADO {
+    bigint id PK
+    bigint clase_id FK
+    timestamp fecha
+    varchar estado_anterior
+    varchar estado_nuevo
+    varchar motivo
+    varchar responsable "sub del usuario o SISTEMA"
+    timestamp inicio_anterior
+    timestamp inicio_nuevo
+    boolean notificado "para reintentar si falla ms-notificaciones"
+  }
+  CLASE ||--o{ RUTINA_ITEM : "tiene"
+  CLASE ||--o{ INSCRIPCION : "recibe"
+  CLASE ||--o{ EVALUACION_CLIMATICA : "registra"
+  CLASE ||--o{ CAMBIO_ESTADO : "historial"

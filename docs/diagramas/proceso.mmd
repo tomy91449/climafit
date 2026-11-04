@@ -1,0 +1,27 @@
+flowchart TD
+  A(["Disparador: tarea programada cada 3 h<br/>o evaluación manual del profesor (F11)"]) --> B["P1. Seleccionar clases al aire libre<br/>que empiezan en las próximas 24 h · RN09"]
+  B --> C["P2. Obtener criterios climáticos de la actividad<br/>y coordenadas del espacio (ms-actividades)"]
+  C --> D["P3. Evaluar pronóstico<br/>(ms-clima + Open-Meteo) · RN10"]
+  D --> E{"¿Respondió el<br/>servicio de clima?"}
+  E -- "No" --> E1["Evaluación FALLIDA<br/>la clase no cambia, se reintenta · RN16"]
+  E -- "Sí" --> F{"P4. Resultado · RN11"}
+  F -- "APTA" --> F1["La clase se mantiene"]
+  F -- "EN_RIESGO" --> G["Clase pasa a EN_RIESGO<br/>aviso al profesor"]
+  G --> H{"Decisión del profesor<br/>(F12) · RN05 · RN12"}
+  H -- "Mantener / no decide" --> F1
+  H -- "Suspender" --> J
+  F -- "NO_APTA" --> J["P5. Clase pasa a SUSPENDIDA<br/>y se busca nuevo horario (F13) · RN13<br/>mismo horario, próximos 7 días<br/>profesor libre (RN04) y pronóstico APTA"]
+  J --> M{"¿Hay día<br/>viable?"}
+  M -- "Sí" --> M1["P6. Clase pasa a REPROGRAMADA<br/>las inscripciones pasan a la nueva fecha"]
+  M -- "No" --> M2["P6. Clase pasa a SUSPENDIDA_SIN_FECHA<br/>el profesor la reagenda (F06)"]
+  M1 --> N
+  M2 --> N
+  N["P7. Notificar a cada inscripto (F14)<br/>ms-notificaciones · RN15"] --> O{"¿Aceptó<br/>WhatsApp? · RN14"}
+  O -- "No" --> O1["Notificación OMITIDA"]
+  O -- "Sí" --> P["Envío por WhatsApp<br/>con reintentos · RN16"]
+  P --> Q["Notificación ENVIADA o FALLIDA"]
+  Q --> S["P8. El alumno mantiene su lugar<br/>o cancela su inscripción (F09)"]
+  S --> Z(["Fin: clase resuelta, alumnos avisados,<br/>cambios de estado en el historial (F15)"])
+  E1 --> Z
+  F1 --> Z
+  O1 --> Z

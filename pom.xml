@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        POM "agregador": SOLO agrupa los proyectos para abrirlos juntos en el IDE y compilarlos
+        con un comando (mvn install). No es padre de nadie y no comparte configuración:
+        cada componente sigue siendo un proyecto Maven independiente, y los microservicios
+        consumen climafit-commons como dependencia (ar.edu.utn.frc.climafit:climafit-commons:1.0.0).
+        Maven ordena la compilación solo: primero la librería, después los servicios.
+    -->
+    <groupId>ar.edu.utn.frc.climafit</groupId>
+    <artifactId>climafit</artifactId>
+    <version>1.0.0</version>
+    <packaging>pom</packaging>
+    <name>climafit (agregador)</name>
+
+    <modules>
+        <module>climafit-commons</module>
+        <module>api-gateway</module>
+        <module>ms-actividades</module>
+        <module>ms-clases</module>
+        <module>ms-clima</module>
+        <module>ms-notificaciones</module>
+    </modules>
+</project>

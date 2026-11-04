@@ -1,0 +1,6 @@
+# Los scripts que corren dentro de Linux (contenedores) tienen que tener fin de línea LF,
+# aunque se editen en Windows. Si no, bash falla con "\r: command not found".
+* text=auto
+*.sh text eol=lf
+mvnw text eol=lf
+*.cmd text eol=crlf

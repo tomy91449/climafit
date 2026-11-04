@@ -1,0 +1,1 @@
+-- Las tablas de ms-clases se agregan acá (ver docs/diagramas/der-clases.mmd).
