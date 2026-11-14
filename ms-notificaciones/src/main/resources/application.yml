@@ -33,6 +33,32 @@ spring:
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8090/realms/climafit}
           jwk-set-uri: ${KEYCLOAK_JWKS_URI:http://localhost:8090/realms/climafit/protocol/openid-connect/certs}
 
+  task:
+    execution:
+      # Pool de hilos de @Async: los envíos de WhatsApp corren acá, no en el hilo de la solicitud.
+      thread-name-prefix: envio-
+      pool:
+        core-size: 4
+        max-size: 8
+
+climafit:
+  whatsapp:
+    # "log" (demo: solo escribe el mensaje en el log) o "twilio" (envío real por el sandbox).
+    proveedor: ${WHATSAPP_PROVEEDOR:log}
+    # RN16: intentos totales por notificación y espera antes del 2.º intento (después se duplica: 1 s, 2 s...).
+    max-intentos: 3
+    espera-inicial: PT1S
+    twilio:
+      url: https://api.twilio.com
+      account-sid: ${TWILIO_ACCOUNT_SID:}
+      auth-token: ${TWILIO_AUTH_TOKEN:}
+      # Número del sandbox de Twilio, por ejemplo +14155238886
+      from: ${TWILIO_FROM:}
+  notificaciones:
+    # Cada cuánto se buscan notificaciones PENDIENTE colgadas, y qué antigüedad deben tener.
+    recuperacion-cada: PT5M
+    pendientes-antiguedad: PT5M
+
 management:
   endpoints:
     web:

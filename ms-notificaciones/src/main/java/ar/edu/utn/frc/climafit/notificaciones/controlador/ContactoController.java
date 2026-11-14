@@ -1,0 +1,41 @@
+package ar.edu.utn.frc.climafit.notificaciones.controlador;
+
+import ar.edu.utn.frc.climafit.notificaciones.dto.ContactoRequest;
+import ar.edu.utn.frc.climafit.notificaciones.dto.ContactoResponse;
+import ar.edu.utn.frc.climafit.notificaciones.servicio.ContactoService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * F10. Cualquier usuario autenticado gestiona su propio contacto (alumnos para recibir avisos,
+ * profesores para recibir las alertas de riesgo). El gateway recibe /api/contactos y reenvía /contactos.
+ */
+@RestController
+@RequestMapping("/contactos")
+@Tag(name = "Contactos", description = "Teléfono y consentimiento para avisos por WhatsApp (F10, RN14)")
+public class ContactoController {
+
+    private final ContactoService servicio;
+
+    public ContactoController(ContactoService servicio) {
+        this.servicio = servicio;
+    }
+
+    @PutMapping("/mio")
+    @Operation(summary = "Registrar o actualizar el teléfono y el consentimiento para avisos por WhatsApp")
+    public ContactoResponse guardar(@Valid @RequestBody ContactoRequest request) {
+        return servicio.guardarMio(request);
+    }
+
+    @GetMapping("/mio")
+    @Operation(summary = "Consultar las preferencias de contacto propias")
+    public ContactoResponse obtener() {
+        return servicio.obtenerMio();
+    }
+}
