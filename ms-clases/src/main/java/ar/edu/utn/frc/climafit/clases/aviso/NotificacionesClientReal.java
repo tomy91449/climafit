@@ -1,6 +1,7 @@
 package ar.edu.utn.frc.climafit.clases.aviso;
 
 import ar.edu.utn.frc.climafit.commons.error.ServicioNoDisponibleException;
+import ar.edu.utn.frc.climafit.commons.http.ClienteServicioFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
@@ -12,9 +13,8 @@ import org.springframework.web.client.RestClientResponseException;
 /**
  * Implementación real: POST /internal/notificaciones en ms-notificaciones (responde 202).
  *
- * TODO (Persona 2): igual que en ActividadesClientReal, falta enchufar la fábrica de RestClient de
- * climafit-commons (token de servicio, timeouts). Sin token, ms-notificaciones responderá 401 porque
- * /internal/** exige ROLE_SERVICIO.
+ * El RestClient lo arma ClienteServicioFactory de climafit-commons: token de servicio (client credentials),
+ * timeouts de 2 s / 5 s, reintentos en lecturas y propagación del correlation id.
  */
 @Component
 @Profile("!stub")
@@ -22,9 +22,9 @@ public class NotificacionesClientReal implements NotificacionesClient {
 
     private final RestClient rest;
 
-    public NotificacionesClientReal(RestClient.Builder builder,
+    public NotificacionesClientReal(ClienteServicioFactory fabrica,
                                     @Value("${climafit.clientes.notificaciones-url}") String baseUrl) {
-        this.rest = builder.baseUrl(baseUrl).build();
+        this.rest = fabrica.crear(baseUrl);
     }
 
     @Override

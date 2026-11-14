@@ -2,6 +2,7 @@ package ar.edu.utn.frc.climafit.clases.client.actividades;
 
 import ar.edu.utn.frc.climafit.commons.error.RecursoNoEncontradoException;
 import ar.edu.utn.frc.climafit.commons.error.ServicioNoDisponibleException;
+import ar.edu.utn.frc.climafit.commons.http.ClienteServicioFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
@@ -18,10 +19,8 @@ import java.util.function.Supplier;
 /**
  * Implementación real: llama a ms-actividades con RestClient.
  *
- * TODO (Persona 2): hoy el RestClient se arma acá con el builder de Spring, sin token de servicio, sin timeouts
- * de 2 s / 5 s y sin reintentos. Cuando climafit-commons publique su fábrica de RestClient (paquete commons.http),
- * hay que reemplazar solo la línea del constructor que arma `rest`; el resto de la clase no cambia.
- * Mientras tanto, contra ms-actividades real las llamadas devolverán 401 (falta el token de servicio).
+ * El RestClient lo arma ClienteServicioFactory de climafit-commons: token de servicio (client credentials),
+ * timeouts de 2 s / 5 s, reintentos en lecturas y propagación del correlation id.
  */
 @Component
 @Profile("!stub")
@@ -29,9 +28,9 @@ public class ActividadesClientReal implements ActividadesClient {
 
     private final RestClient rest;
 
-    public ActividadesClientReal(RestClient.Builder builder,
+    public ActividadesClientReal(ClienteServicioFactory fabrica,
                                  @Value("${climafit.clientes.actividades-url}") String baseUrl) {
-        this.rest = builder.baseUrl(baseUrl).build();
+        this.rest = fabrica.crear(baseUrl);
     }
 
     @Override
