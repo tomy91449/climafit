@@ -9,41 +9,32 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
- * Asigna un identificador a cada solicitud para poder seguir un proceso distribuido en los logs.
- * <p>
- * El gateway genera el {@code X-Correlation-Id}; cada servicio lo lee, lo pone en el MDC
- * (así aparece en cada línea de log) y lo devuelve en la respuesta. Cuando ms-clases llame a
- * ms-clima, va a reenviar el mismo id: buscando ese valor en los logs de todos los contenedores
- * se ve el recorrido completo de una evaluación.
- * <p>
- * Si la solicitud llega sin id (por ejemplo, la tarea programada), se genera uno nuevo.
+ * Lee el {@code X-Correlation-Id} del pedido (el gateway o el servicio que llama lo envía) o genera
+ * uno nuevo, lo guarda en el MDC para que aparezca en los logs y en los errores, y lo devuelve
+ * en la respuesta.
  */
 public class CorrelationIdFilter extends OncePerRequestFilter {
 
-    public static final String HEADER = "X-Correlation-Id";
-    public static final String MDC_KEY = "correlationId";
+    /** Solo se aceptan identificadores cortos y sin caracteres raros; si no, se genera uno nuevo. */
+    private static final Pattern FORMATO_VALIDO = Pattern.compile("[A-Za-z0-9._-]{1,64}");
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
-        String correlationId = request.getHeader(HEADER);
-        if (correlationId == null || correlationId.isBlank()) {
-            correlationId = UUID.randomUUID().toString();
-        }
-        MDC.put(MDC_KEY, correlationId);
-        response.setHeader(HEADER, correlationId);
+        String recibido = request.getHeader(CorrelationId.CABECERA);
+        String correlationId = recibido != null && FORMATO_VALIDO.matcher(recibido).matches()
+                ? recibido
+                : UUID.randomUUID().toString();
+
+        MDC.put(CorrelationId.CLAVE_MDC, correlationId);
+        response.setHeader(CorrelationId.CABECERA, correlationId);
         try {
             chain.doFilter(request, response);
         } finally {
-            // Los hilos del servidor se reutilizan: si no se limpia, el id "se filtra" a la próxima solicitud.
-            MDC.remove(MDC_KEY);
+            MDC.remove(CorrelationId.CLAVE_MDC);
         }
-    }
-
-    /** Id de la solicitud actual (o null fuera de una solicitud HTTP). */
-    public static String actual() {
-        return MDC.get(MDC_KEY);
     }
 }

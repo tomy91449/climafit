@@ -25,7 +25,7 @@ Este documento reúne las respuestas del cuestionario de propuesta del Trabajo P
 
 ClimaFit es un backend para gimnasios, grupos de entrenamiento y profesores que dan clases en espacios públicos al aire libre de Córdoba, como parques y la costanera. Este tipo de actividad es muy común en la ciudad, pero depende de un clima cada vez más imprevisible por el fenómeno de El Niño. Hoy las suspensiones se deciden a último momento y se avisan a mano, uno por uno. El resultado son alumnos que viajan a clases que no se dictan, reprogramaciones desordenadas y clases que se pierden.
 
-La solución permite administrar tipos de actividad, ejercicios (incluidos los ejercicios personalizados de cada profesor), espacios, clases e inscripciones, con acceso según el rol: administrador, profesor o alumno. Su principal aporte es un proceso automático de evaluación climática y reprogramación. Antes de cada clase al aire libre, el sistema consulta el pronóstico para ese lugar y horario y lo compara con los criterios de la actividad: probabilidad de lluvia, viento, temperatura mínima y tormentas. No es lo mismo una clase de yoga que una de running. Con eso decide si la clase se mantiene, queda en riesgo (decide el profesor) o se suspende. Si se suspende, busca el primer día de la semana siguiente en el que el profesor esté libre y el pronóstico sea apto, pasa las inscripciones a la nueva fecha y avisa por WhatsApp a cada alumno con el motivo y la nueva fecha.
+La solución permite administrar tipos de actividad, ejercicios (incluidos los ejercicios personalizados de cada profesor), espacios, clases e inscripciones, con acceso según el rol: administrador, profesor o alumno. Su principal aporte es un proceso automático de evaluación climática y reprogramación. Antes de cada clase al aire libre, el sistema consulta el pronóstico para ese lugar y horario y lo compara con los criterios de la actividad: probabilidad e intensidad de lluvia, viento, temperatura mínima y tormentas. No es lo mismo una clase de yoga que una de running. Con eso decide si la clase se mantiene, queda en riesgo (decide el profesor) o se suspende. Si se suspende, busca el primer día de la semana siguiente en el que el profesor esté libre y el pronóstico sea apto, pasa las inscripciones a la nueva fecha y avisa por WhatsApp a cada alumno con el motivo y la nueva fecha.
 
 El resultado concreto es que una clase afectada por el clima se suspende, se reprograma y se comunica sin intervención manual. Cada alumno sabe a tiempo si tiene que ir y cuándo, y el profesor cuenta con el historial de cambios de estado de cada clase.
 
@@ -72,7 +72,7 @@ Prioridad: **Alta** = imprescindible para el proceso central. **Media** = comple
 
 **F02 — Gestión de tipos de actividad y criterios climáticos**
 - Actor: administrador.
-- Comportamiento: alta, modificación y baja lógica de tipos de actividad con sus criterios: probabilidad máxima de lluvia, viento máximo y temperatura mínima.
+- Comportamiento: alta, modificación y baja lógica de tipos de actividad con sus criterios: probabilidad de lluvia a partir de la cual se considera que va a llover, lluvia máxima tolerada (mm por hora), viento máximo y temperatura mínima.
 - Resultado observable: el tipo de actividad queda disponible para crear clases.
 - Prioridad: Alta.
 
@@ -224,9 +224,9 @@ Prioridad: **Alta** = imprescindible para el proceso central. **Media** = comple
 
 **RN10 — Evaluación del pronóstico**
 - Condición: se evalúa el pronóstico de las horas que dura la clase.
-- Comportamiento: se toman la mayor probabilidad de lluvia, el mayor viento y la menor temperatura de esas horas, y si hay tormenta eléctrica.
-  - **NO_APTA:** se supera la probabilidad máxima de lluvia o el viento máximo de la actividad, la temperatura queda por debajo de la mínima o hay tormenta eléctrica.
-  - **EN_RIESGO:** ningún límite se supera, pero algún valor queda cerca: a 10 puntos o menos de la probabilidad de lluvia máxima, a 10 km/h o menos del viento máximo, o a 2 °C o menos de la temperatura mínima.
+- Comportamiento: se toman la mayor probabilidad de lluvia, la mayor lluvia en mm por hora, el mayor viento y la menor temperatura de esas horas, y si hay tormenta eléctrica. La lluvia solo cuenta si su probabilidad alcanza la de la actividad (`prob_lluvia_max`); por debajo, se considera que no va a llover.
+  - **NO_APTA:** la lluvia cuenta y supera los mm por hora que tolera la actividad (`lluvia_max_mm_hora`), se supera el viento máximo, la temperatura queda por debajo de la mínima o hay tormenta eléctrica.
+  - **EN_RIESGO:** ningún límite se supera, pero algún valor queda cerca: la lluvia cuenta y llega al 80 % de los mm tolerados (margen del 20 %; con límite 0 no hay zona de riesgo), el viento queda a 10 km/h o menos del máximo, o la temperatura queda a 2 °C o menos de la mínima.
   - **APTA:** en cualquier otro caso.
 - Funcionalidad: F11.
 
@@ -415,7 +415,7 @@ flowchart LR
 - **Administrador (persona):** gestiona tipos de actividad con sus criterios climáticos, espacios y ejercicios base, y puede ejecutar la evaluación general.
 - **ClimaFit Backend (sistema a desarrollar):** gestiona clases al aire libre y ejecuta el proceso de evaluación climática, suspensión, reprogramación y notificación.
 - **Keycloak (sistema externo, Identity Provider):** autentica a los usuarios con OIDC, emite JWT con los roles ADMIN, PROFESOR y ALUMNO, y emite el token de servicio que usan los microservicios entre sí. Se despliega en el mismo Docker Compose, pero en el contexto es un sistema que el equipo no desarrolla.
-- **Open-Meteo (API pública externa):** pronóstico horario por coordenadas (probabilidad de lluvia, viento, temperatura y código de tiempo). Es la información que define si una clase se suspende. No requiere API key.
+- **Open-Meteo (API pública externa):** pronóstico horario por coordenadas (probabilidad de lluvia, precipitación en mm, viento, temperatura y código de tiempo). Es la información que define si una clase se suspende. No requiere API key.
 - **Twilio WhatsApp API (sistema externo):** envía los mensajes de WhatsApp a alumnos y profesores.
 
 **Relaciones**
@@ -650,6 +650,7 @@ erDiagram
     varchar nombre UK
     varchar descripcion
     int prob_lluvia_max "porcentaje 0-100"
+    decimal lluvia_max_mm_hora "mm por hora tolerados"
     int viento_max_kmh
     int temp_min_c
     boolean activo
@@ -679,7 +680,7 @@ erDiagram
   TIPO_ACTIVIDAD ||--o{ EJERCICIO_ACTIVIDAD : "admite"
 ```
 
-- TIPO_ACTIVIDAD guarda los criterios climáticos de cada actividad (probabilidad de lluvia máxima, viento máximo y temperatura mínima).
+- TIPO_ACTIVIDAD guarda los criterios climáticos de cada actividad (probabilidad de lluvia a partir de la cual se considera que llueve, lluvia máxima tolerada en mm por hora, viento máximo y temperatura mínima).
 - ESPACIO guarda las coordenadas que se usan para consultar el pronóstico.
 - EJERCICIO tiene `propietario_id`: si es NULL es un ejercicio base, y si no, el ejercicio es personalizado de ese profesor (RN08).
 - La relación entre ejercicios y actividades es N a N, a través de EJERCICIO_ACTIVIDAD (RN07).
@@ -728,6 +729,7 @@ erDiagram
     varchar resultado "APTA, EN_RIESGO, NO_APTA, FALLIDA"
     varchar motivo
     int prob_lluvia
+    decimal precipitacion_mm
     int viento_kmh
     int temperatura_c
     boolean tormenta
@@ -919,7 +921,7 @@ erDiagram
 - `infra/keycloak/climafit-realm.json`: realm con roles, clientes y usuarios de prueba (`admin1`, `profe1`, `profe2`, `alumno1`, `alumno2`, `alumno3`).
 - Un `Dockerfile` multi-etapa por componente.
 - Migraciones Flyway en cada servicio con datos iniciales:
-  - actividades Yoga, Funcional y Running con sus criterios;
+  - actividades Yoga, Funcional, Running, Acrobacia aérea y Patinaje con sus criterios;
   - espacios Parque Sarmiento, Parque de las Tejas y un gimnasio techado;
   - ejercicios base.
 - `postman/`: colección y entorno.
@@ -1069,7 +1071,7 @@ El proceso se ejecuta de forma programada y también a pedido.
 - Relación: F09, RN01, RN03.
 
 **CP3 — Proceso central: suspensión y reprogramación automática**
-- Condición inicial: la clase A de Yoga está PROGRAMADA dentro de las próximas 24 h, con el alumno 1 (acepta WhatsApp) y el alumno 2 (no acepta), y hay un escenario de 90 % de lluvia en el horario de la clase.
+- Condición inicial: la clase A de Yoga está PROGRAMADA dentro de las próximas 24 h, con el alumno 1 (acepta WhatsApp) y el alumno 2 (no acepta), y hay un escenario de 90 % de lluvia con 5 mm/h en el horario de la clase (Yoga tolera 0,5 mm/h).
 - Acción:
   1. `POST /api/clases/{A}/evaluaciones`.
   2. Consultar la clase, sus inscripciones, `GET /api/clases/{A}/historial` y `GET /api/notificaciones?claseId={A}`.
@@ -1082,7 +1084,7 @@ El proceso se ejecuta de forma programada y también a pedido.
 - Relación: F11, F13, F14, F15, RN09, RN10, RN11, RN13, RN14, RN15.
 
 **CP4 — Clase en riesgo y decisión del profesor**
-- Condición inicial: la clase B de Yoga tiene un escenario de viento de 20 km/h; el límite de la actividad es 25 km/h.
+- Condición inicial: la clase B de Yoga tiene un escenario de viento de 30 km/h; el límite de la actividad es 35 km/h.
 - Acción:
   1. `POST /api/clases/{B}/evaluaciones`.
   2. El profesor 1 hace `PATCH /api/clases/{B}/decision-riesgo` con `SUSPENDER`.
@@ -1092,7 +1094,7 @@ El proceso se ejecuta de forma programada y también a pedido.
 - Relación: F12, F14, RN10, RN11, RN12.
 
 **CP5 — Sin día viable y reagenda manual**
-- Condición inicial: la clase C de Running tiene un escenario de 95 % de lluvia en Parque de las Tejas durante 8 días.
+- Condición inicial: la clase C de Running tiene un escenario de 95 % de lluvia con 8 mm/h en Parque de las Tejas durante 8 días (Running tolera 4 mm/h).
 - Acción:
   1. `POST /api/clases/{C}/evaluaciones`.
   2. `PATCH /api/clases/{C}/reprogramacion` con una nueva fecha.

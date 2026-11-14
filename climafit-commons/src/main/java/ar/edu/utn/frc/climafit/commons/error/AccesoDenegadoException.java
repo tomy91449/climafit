@@ -2,13 +2,10 @@ package ar.edu.utn.frc.climafit.commons.error;
 
 import org.springframework.http.HttpStatus;
 
-/**
- * 403 por un control de PROPIEDAD que hace el propio servicio (RN05: solo el profesor dueño
- * de la clase o un admin). Los 403 por ROL los resuelve Spring Security antes de llegar acá.
- */
+/** 403 ACCESO_DENEGADO: el usuario está autenticado pero no puede operar sobre ese recurso. */
 public class AccesoDenegadoException extends NegocioException {
 
     public AccesoDenegadoException(String mensaje) {
-        super("ACCESO_DENEGADO", mensaje, HttpStatus.FORBIDDEN);
+        super(HttpStatus.FORBIDDEN, CodigosError.ACCESO_DENEGADO, mensaje);
     }
 }
