@@ -156,7 +156,7 @@ class NotificacionesIntegracionTest {
     void consultarContactoPropio() throws Exception {
         mvc.perform(get("/contactos/mio").with(usuario("alu-nuevo", "ALUMNO")))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.codigo").value("RECURSO_NO_ENCONTRADO"));
+                .andExpect(jsonPath("$.codigo").value("NO_ENCONTRADO"));
 
         mvc.perform(put("/contactos/mio").with(usuario("alu-nuevo", "ALUMNO"))
                         .contentType(MediaType.APPLICATION_JSON)
