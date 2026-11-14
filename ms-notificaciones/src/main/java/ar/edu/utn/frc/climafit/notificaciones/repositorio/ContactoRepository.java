@@ -1,0 +1,8 @@
+package ar.edu.utn.frc.climafit.notificaciones.repositorio;
+
+import ar.edu.utn.frc.climafit.notificaciones.dominio.Contacto;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+/** La clave es el "sub" de Keycloak: findById(usuarioId) devuelve el contacto de ese usuario. */
+public interface ContactoRepository extends JpaRepository<Contacto, String> {
+}
