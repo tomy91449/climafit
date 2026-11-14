@@ -36,3 +36,16 @@ logging:
 springdoc:
   api-docs:
     path: /v3/api-docs
+
+# Cache y evaluación meteorológica (propuesta, sección 08).
+climafit:
+  clima:
+    modo-inicial: REAL
+    openmeteo-url: https://api.open-meteo.com
+    cache-minutos: 30
+    timeout-conexion-seg: 2
+    timeout-lectura-seg: 5
+    margen-lluvia-puntos: 10
+    margen-viento-kmh: 10
+    margen-temperatura-c: 2
+    margen-lluvia-mm-proporcion: 0.20

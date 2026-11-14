@@ -1,0 +1,4 @@
+# Perfil stub: usa los clientes falsos (ActividadesClientStub, ClimaClientStub).
+climafit:
+  evaluacion:
+    programada: false
