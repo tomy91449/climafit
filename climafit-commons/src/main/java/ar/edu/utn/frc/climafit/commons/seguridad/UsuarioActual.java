@@ -1,55 +1,67 @@
 package ar.edu.utn.frc.climafit.commons.seguridad;
 
+import ar.edu.utn.frc.climafit.commons.error.CodigosError;
+import ar.edu.utn.frc.climafit.commons.error.NegocioException;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
- * Acceso cómodo al usuario que hizo la solicitud, para los controles de PROPIEDAD que el
- * gateway no puede resolver (porque no conoce los datos):
- * <ul>
- *   <li>RN05: solo el profesor dueño de la clase o un ADMIN la modifica.</li>
- *   <li>RN08: un ejercicio personalizado solo lo ve su dueño.</li>
- * </ul>
- * El id del usuario es el claim "sub" del JWT (un UUID que asigna Keycloak). Es lo que se guarda
- * en las tablas como profesor_id, alumno_id, propietario_id.
+ * Datos del usuario del pedido actual, tomados del JWT: su {@code sub} y sus roles.
+ * Se usa para los controles de propiedad (RN05, RN08): "¿esta clase / este ejercicio es de quien pide?".
  */
 public class UsuarioActual {
 
-    public static final String ADMIN = "ADMIN";
-    public static final String PROFESOR = "PROFESOR";
-    public static final String ALUMNO = "ALUMNO";
-    public static final String SERVICIO = "SERVICIO";
+    private static final String PREFIJO = "ROLE_";
 
-    /** "sub" del token: identificador estable del usuario en Keycloak. */
+    /** El {@code sub} del token. Falla con 401 si no hay usuario autenticado. */
     public String id() {
-        return token().getToken().getSubject();
+        Authentication autenticacion = autenticacion();
+        if (autenticacion == null || !autenticacion.isAuthenticated()) {
+            throw new NegocioException(HttpStatus.UNAUTHORIZED, CodigosError.NO_AUTENTICADO,
+                    "Se requiere un usuario autenticado");
+        }
+        return autenticacion.getName();
     }
 
-    /** Nombre de usuario legible (ej. "profe1"), útil para logs y mensajes. */
-    public String nombreUsuario() {
-        return token().getToken().getClaimAsString("preferred_username");
+    /** Roles del usuario sin el prefijo ROLE_ (por ejemplo, ADMIN o PROFESOR). */
+    public Set<String> roles() {
+        Authentication autenticacion = autenticacion();
+        if (autenticacion == null) {
+            return Set.of();
+        }
+        return autenticacion.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(autoridad -> autoridad.startsWith(PREFIJO))
+                .map(autoridad -> autoridad.substring(PREFIJO.length()))
+                .collect(Collectors.toUnmodifiableSet());
     }
 
     public boolean tieneRol(String rol) {
-        return token().getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_" + rol));
+        return roles().contains(rol);
     }
 
     public boolean esAdmin() {
-        return tieneRol(ADMIN);
+        return tieneRol(Roles.ADMIN);
     }
 
-    /** true si el usuario actual es el dueño indicado o es ADMIN (patrón típico de RN05). */
-    public boolean esDuenioOAdmin(String duenioId) {
-        return esAdmin() || id().equals(duenioId);
+    public boolean esProfesor() {
+        return tieneRol(Roles.PROFESOR);
     }
 
-    private JwtAuthenticationToken token() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth instanceof JwtAuthenticationToken jwt) {
-            return jwt;
-        }
-        throw new IllegalStateException("No hay un usuario autenticado con JWT en esta solicitud");
+    public boolean esAlumno() {
+        return tieneRol(Roles.ALUMNO);
+    }
+
+    public boolean esServicio() {
+        return tieneRol(Roles.SERVICIO);
+    }
+
+    private Authentication autenticacion() {
+        return SecurityContextHolder.getContext().getAuthentication();
     }
 }

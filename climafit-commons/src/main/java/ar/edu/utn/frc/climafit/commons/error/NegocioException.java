@@ -3,31 +3,26 @@ package ar.edu.utn.frc.climafit.commons.error;
 import org.springframework.http.HttpStatus;
 
 /**
- * Excepción base para las reglas de negocio. Cada microservicio define sus propios códigos
- * (por ejemplo, ms-clases lanza {@code new NegocioException("CUPO_COMPLETO", "...", HttpStatus.CONFLICT)});
- * la librería solo aporta la clase y la traducción al formato común.
+ * Excepción base de los errores de negocio. Cada servicio la usa (o la extiende)
+ * con su propio código, por ejemplo:
+ * {@code throw new NegocioException(HttpStatus.CONFLICT, "CUPO_COMPLETO", "La clase no tiene lugares disponibles");}
  */
 public class NegocioException extends RuntimeException {
 
-    private final String codigo;
     private final HttpStatus status;
+    private final String codigo;
 
-    public NegocioException(String codigo, String mensaje, HttpStatus status) {
+    public NegocioException(HttpStatus status, String codigo, String mensaje) {
         super(mensaje);
-        this.codigo = codigo;
         this.status = status;
-    }
-
-    /** Atajo para el caso más común: una regla de negocio que impide la operación (409). */
-    public NegocioException(String codigo, String mensaje) {
-        this(codigo, mensaje, HttpStatus.CONFLICT);
-    }
-
-    public String getCodigo() {
-        return codigo;
+        this.codigo = codigo;
     }
 
     public HttpStatus getStatus() {
         return status;
+    }
+
+    public String getCodigo() {
+        return codigo;
     }
 }

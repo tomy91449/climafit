@@ -10,24 +10,30 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Keycloak guarda los roles del realm dentro del JWT así:
- * <pre>
- * "realm_access": { "roles": ["PROFESOR", "default-roles-climafit", ...] }
- * </pre>
- * Spring Security no sabe leer ese formato: por defecto busca el claim "scope". Este conversor
- * transforma cada rol en una autoridad "ROLE_PROFESOR", que es lo que esperan
- * {@code hasRole("PROFESOR")} y {@code @PreAuthorize("hasRole('PROFESOR')")}.
+ * Convierte los roles de realm de Keycloak ({@code realm_access.roles} del JWT) en autoridades
+ * de Spring Security con prefijo {@code ROLE_}: ADMIN, PROFESOR, ALUMNO y SERVICIO pasan a ser
+ * ROLE_ADMIN, ROLE_PROFESOR, ROLE_ALUMNO y ROLE_SERVICIO.
  */
 public class KeycloakRolesConverter implements Converter<Jwt, Collection<GrantedAuthority>> {
 
+    private static final String CLAIM_REALM_ACCESS = "realm_access";
+    private static final String CLAIM_ROLES = "roles";
+    private static final String PREFIJO = "ROLE_";
+
     @Override
     public Collection<GrantedAuthority> convert(Jwt jwt) {
-        Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
-        if (realmAccess == null || !(realmAccess.get("roles") instanceof Collection<?> roles)) {
+        Object realmAccess = jwt.getClaims().get(CLAIM_REALM_ACCESS);
+        if (!(realmAccess instanceof Map<?, ?> mapa)) {
             return List.of();
         }
-        return roles.stream()
-                .map(rol -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + rol))
+        Object roles = mapa.get(CLAIM_ROLES);
+        if (!(roles instanceof Collection<?> coleccion)) {
+            return List.of();
+        }
+        return coleccion.stream()
+                .filter(String.class::isInstance)
+                .map(String.class::cast)
+                .map(rol -> (GrantedAuthority) new SimpleGrantedAuthority(PREFIJO + rol))
                 .toList();
     }
 }

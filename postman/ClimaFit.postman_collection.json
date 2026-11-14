@@ -464,7 +464,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Crossfit\",\n  \"descripcion\": \"x\",\n  \"probLluviaMax\": 30,\n  \"vientoMaxKmh\": 30,\n  \"tempMinC\": 5\n}"
+              "raw": "{\n  \"nombre\": \"Crossfit\",\n  \"descripcion\": \"x\",\n  \"probLluviaMax\": 30,\n  \"lluviaMaxMm\": 0.5,\n  \"vientoMaxKmh\": 30,\n  \"tempMinC\": 5\n}"
             }
           },
           "event": [
@@ -576,7 +576,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Pilates\",\n  \"descripcion\": \"Pilates de suelo al aire libre\",\n  \"probLluviaMax\": 20,\n  \"vientoMaxKmh\": 25,\n  \"tempMinC\": 12\n}"
+              "raw": "{\n  \"nombre\": \"Pilates\",\n  \"descripcion\": \"Pilates de suelo al aire libre\",\n  \"probLluviaMax\": 20,\n  \"lluviaMaxMm\": 0.5,\n  \"vientoMaxKmh\": 25,\n  \"tempMinC\": 12\n}"
             }
           },
           "event": [
@@ -615,7 +615,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Invalida\",\n  \"descripcion\": \"x\",\n  \"probLluviaMax\": 150,\n  \"vientoMaxKmh\": -5,\n  \"tempMinC\": 5\n}"
+              "raw": "{\n  \"nombre\": \"Invalida\",\n  \"descripcion\": \"x\",\n  \"probLluviaMax\": 150,\n  \"lluviaMaxMm\": -1,\n  \"vientoMaxKmh\": -5,\n  \"tempMinC\": 5\n}"
             }
           },
           "event": [
@@ -1806,7 +1806,7 @@
       "description": "Proceso central completo (P1-P8): lluvia sobre la clase A -> SUSPENDIDA -> REPROGRAMADA al día siguiente -> notificaciones (F11, F13, F14, F15, RN10, RN11, RN13, RN14).",
       "item": [
         {
-          "name": "Escenario: 90% de lluvia en Parque Sarmiento durante la clase A",
+          "name": "Escenario: 90% de lluvia (5 mm/h) en Parque Sarmiento durante la clase A",
           "request": {
             "method": "POST",
             "header": [
@@ -1828,7 +1828,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"latitud\": {{latSarmiento}},\n  \"longitud\": {{lonSarmiento}},\n  \"desde\": \"{{simADesde}}\",\n  \"hasta\": \"{{simAHasta}}\",\n  \"probLluvia\": 90,\n  \"vientoKmh\": 10,\n  \"temperaturaC\": 18,\n  \"tormenta\": false\n}"
+              "raw": "{\n  \"latitud\": {{latSarmiento}},\n  \"longitud\": {{lonSarmiento}},\n  \"desde\": \"{{simADesde}}\",\n  \"hasta\": \"{{simAHasta}}\",\n  \"probLluvia\": 90,\n  \"lluviaMm\": 5.0,\n  \"vientoKmh\": 10,\n  \"temperaturaC\": 18,\n  \"tormenta\": false\n}"
             }
           },
           "event": [
@@ -2042,10 +2042,10 @@
     },
     {
       "name": "07 - Proceso: EN_RIESGO y decisión del profesor",
-      "description": "Viento cercano al límite de Yoga (25 km/h) -> EN_RIESGO; el profesor decide suspender (F12, RN05, RN10, RN12).",
+      "description": "Viento cercano al límite de Yoga (35 km/h) -> EN_RIESGO; el profesor decide suspender (F12, RN05, RN10, RN12).",
       "item": [
         {
-          "name": "Escenario: viento de 20 km/h durante la clase B",
+          "name": "Escenario: viento de 30 km/h durante la clase B",
           "request": {
             "method": "POST",
             "header": [
@@ -2067,7 +2067,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"latitud\": {{latSarmiento}},\n  \"longitud\": {{lonSarmiento}},\n  \"desde\": \"{{simBDesde}}\",\n  \"hasta\": \"{{simBHasta}}\",\n  \"probLluvia\": 0,\n  \"vientoKmh\": 20,\n  \"temperaturaC\": 20,\n  \"tormenta\": false\n}"
+              "raw": "{\n  \"latitud\": {{latSarmiento}},\n  \"longitud\": {{lonSarmiento}},\n  \"desde\": \"{{simBDesde}}\",\n  \"hasta\": \"{{simBHasta}}\",\n  \"probLluvia\": 0,\n  \"lluviaMm\": 0.0,\n  \"vientoKmh\": 30,\n  \"temperaturaC\": 20,\n  \"tormenta\": false\n}"
             }
           },
           "event": [
@@ -2239,7 +2239,7 @@
       "description": "Lluvia durante 8 días en Parque de las Tejas -> SUSPENDIDA_SIN_FECHA; el profesor reagenda (F06, F13, RN13).",
       "item": [
         {
-          "name": "Escenario: 95% de lluvia en Parque de las Tejas por 8 días",
+          "name": "Escenario: 95% de lluvia (8 mm/h) en Parque de las Tejas por 8 días",
           "request": {
             "method": "POST",
             "header": [
@@ -2261,7 +2261,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"latitud\": {{latTejas}},\n  \"longitud\": {{lonTejas}},\n  \"desde\": \"{{simCDesde}}\",\n  \"hasta\": \"{{simCHasta}}\",\n  \"probLluvia\": 95,\n  \"vientoKmh\": 15,\n  \"temperaturaC\": 16,\n  \"tormenta\": false\n}"
+              "raw": "{\n  \"latitud\": {{latTejas}},\n  \"longitud\": {{lonTejas}},\n  \"desde\": \"{{simCDesde}}\",\n  \"hasta\": \"{{simCHasta}}\",\n  \"probLluvia\": 95,\n  \"lluviaMm\": 8.0,\n  \"vientoKmh\": 15,\n  \"temperaturaC\": 16,\n  \"tormenta\": false\n}"
             }
           },
           "event": [
