@@ -7,6 +7,6 @@ import org.springframework.http.HttpStatus;
 public class ClaseNoEvaluableException extends NegocioException {
 
     public ClaseNoEvaluableException(String mensaje) {
-        super("CLASE_NO_EVALUABLE", mensaje, HttpStatus.CONFLICT);
+        super(HttpStatus.CONFLICT, "CLASE_NO_EVALUABLE", mensaje);
     }
 }

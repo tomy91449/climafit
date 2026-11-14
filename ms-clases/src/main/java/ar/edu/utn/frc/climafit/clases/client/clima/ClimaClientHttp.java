@@ -1,7 +1,7 @@
 package ar.edu.utn.frc.climafit.clases.client.clima;
 
 import ar.edu.utn.frc.climafit.commons.error.ServicioNoDisponibleException;
-import ar.edu.utn.frc.climafit.commons.trazabilidad.CorrelationIdFilter;
+import ar.edu.utn.frc.climafit.commons.trazabilidad.CorrelationId;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.List;
@@ -59,9 +59,9 @@ public class ClimaClientHttp implements ClimaClient {
                         throw new ServicioNoDisponibleException(
                                 "No se pudo obtener el token de servicio de Keycloak", e);
                     }
-                    String correlationId = MDC.get(CorrelationIdFilter.MDC_KEY);
+                    String correlationId = MDC.get(CorrelationId.CLAVE_MDC);
                     if (correlationId != null && !correlationId.isBlank()) {
-                        request.getHeaders().set(CorrelationIdFilter.HEADER, correlationId);
+                        request.getHeaders().set(CorrelationId.CABECERA, correlationId);
                     }
                     return execution.execute(request, body);
                 })

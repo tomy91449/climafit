@@ -140,6 +140,7 @@ public class ReprogramacionService {
     }
 
     public static CriteriosClimaDto criterios(ActividadDto a) {
-        return new CriteriosClimaDto(a.probLluviaMax(), a.vientoMaxKmh(), a.tempMinC(), a.lluviaMaxMmHora());
+        return new CriteriosClimaDto(a.probLluviaMax().intValue(), a.vientoMaxKmh().intValue(),
+                a.tempMinC().intValue(), a.lluviaMaxMmHora());
     }
 }

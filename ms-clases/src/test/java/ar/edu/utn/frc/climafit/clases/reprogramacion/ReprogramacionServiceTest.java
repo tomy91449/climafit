@@ -4,6 +4,7 @@ import static ar.edu.utn.frc.climafit.clases.evaluacion.Datos.SARMIENTO;
 import static ar.edu.utn.frc.climafit.clases.evaluacion.Datos.YOGA;
 import static ar.edu.utn.frc.climafit.clases.evaluacion.Datos.cambio;
 import static ar.edu.utn.frc.climafit.clases.evaluacion.Datos.clase;
+import static ar.edu.utn.frc.climafit.clases.evaluacion.Datos.inscripcion;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -57,8 +58,8 @@ class ReprogramacionServiceTest {
         servicio = new ReprogramacionService(clima, clases, inscripciones, cambioEstado, aviso);
         clase = clase(7, 6);
         when(inscripciones.findByClaseIdAndEstado(7L, EstadoInscripcion.ACTIVA)).thenReturn(List.of(
-                new Inscripcion(7L, "alumno1", EstadoInscripcion.ACTIVA, clase.getInicio()),
-                new Inscripcion(7L, "alumno2", EstadoInscripcion.ACTIVA, clase.getInicio())));
+                inscripcion(7L, "alumno1", clase.getInicio()),
+                inscripcion(7L, "alumno2", clase.getInicio())));
     }
 
     private LocalDateTime dia(int n) {

@@ -7,6 +7,6 @@ import org.springframework.http.HttpStatus;
 public class ClaseNoEnRiesgoException extends NegocioException {
 
     public ClaseNoEnRiesgoException(String mensaje) {
-        super("CLASE_NO_EN_RIESGO", mensaje, HttpStatus.CONFLICT);
+        super(HttpStatus.CONFLICT, "CLASE_NO_EN_RIESGO", mensaje);
     }
 }

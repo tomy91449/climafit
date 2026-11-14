@@ -6,7 +6,8 @@ import ar.edu.utn.frc.climafit.commons.seguridad.UsuarioActual;
 import org.springframework.stereotype.Component;
 
 /** RN05: solo el profesor de la clase o un administrador. 403 ACCESO_DENEGADO si no. */
-@Component
+// Nombre propio: ms-clases ya tiene clase.AutorizacionClase (Persona 3) y Spring no admite dos beans iguales.
+@Component("autorizacionEvaluacion")
 public class AutorizacionClase {
 
     private final UsuarioActual usuario;

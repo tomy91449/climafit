@@ -64,8 +64,7 @@ class EvaluacionServiceTest {
 
     @Test
     void rn09_claseTechadaNoSeEvalua() {
-        Clase techada = new Clase(1L, 3L, false, "profe1", AHORA.plusHours(6), 60, 10);
-        techada.setId(5L);
+        Clase techada = Datos.clase(5L, 3L, false, AHORA.plusHours(6));
         ClaseNoEvaluableException e = assertThrows(ClaseNoEvaluableException.class,
                 () -> servicio.evaluarManual(techada, "profe1"));
         assertEquals("CLASE_NO_EVALUABLE", e.getCodigo());
