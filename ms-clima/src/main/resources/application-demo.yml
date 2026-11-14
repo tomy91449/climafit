@@ -1,0 +1,4 @@
+# Perfil demo: habilita los modos y escenarios de ms-clima (propuesta, sección 10.2).
+climafit:
+  clima:
+    modo-inicial: SIMULADO

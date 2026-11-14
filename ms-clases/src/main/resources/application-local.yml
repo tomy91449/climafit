@@ -1,0 +1,10 @@
+climafit:
+  clients:
+    clima-url: http://localhost:8083
+spring:
+  security:
+    oauth2:
+      client:
+        provider:
+          climafit-servicios:
+            token-uri: ${KEYCLOAK_TOKEN_URI:http://localhost:8090/realms/climafit/protocol/openid-connect/token}

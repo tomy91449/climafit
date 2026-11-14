@@ -32,6 +32,16 @@ spring:
           # issuer-uri valida el claim "iss"; jwk-set-uri es de dónde se bajan las claves públicas.
           issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8090/realms/climafit}
           jwk-set-uri: ${KEYCLOAK_JWKS_URI:http://localhost:8090/realms/climafit/protocol/openid-connect/certs}
+      client:
+        registration:
+          climafit-servicios:
+            provider: climafit-servicios
+            client-id: climafit-servicios
+            client-secret: ${CLIENTE_SERVICIOS_SECRET:}
+            authorization-grant-type: client_credentials
+        provider:
+          climafit-servicios:
+            token-uri: ${KEYCLOAK_TOKEN_URI:http://keycloak:8080/realms/climafit/protocol/openid-connect/token}
 
 management:
   endpoints:
@@ -47,3 +57,11 @@ logging:
 springdoc:
   api-docs:
     path: /v3/api-docs
+
+climafit:
+  clients:
+    clima-url: ${MS_CLIMA_URL:http://ms-clima:8080}
+  evaluacion:
+    programada: true
+    intervalo: PT3H
+    retraso-inicial: PT1M
