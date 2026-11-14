@@ -50,8 +50,8 @@ public class EscenarioController {
     @PreAuthorize("hasRole('ADMIN')")
     public EscenarioDto cargar(@Valid @RequestBody EscenarioDto e) {
         if (!e.hasta().isAfter(e.desde())) {
-            throw new NegocioException("DATOS_INVALIDOS", "'hasta' tiene que ser posterior a 'desde'",
-                    HttpStatus.BAD_REQUEST);
+            throw new NegocioException(HttpStatus.BAD_REQUEST, "DATOS_INVALIDOS",
+                    "'hasta' tiene que ser posterior a 'desde'");
         }
         double mm = e.precipitacionMm() == null ? 0.0 : e.precipitacionMm();
         fuente.agregar(new Escenario(e.latitud(), e.longitud(), e.desde(), e.hasta(), e.probLluvia(),

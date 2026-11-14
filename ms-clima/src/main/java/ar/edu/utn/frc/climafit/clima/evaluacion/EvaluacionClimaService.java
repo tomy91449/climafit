@@ -33,14 +33,13 @@ public class EvaluacionClimaService {
     public List<EvaluacionVentana> evaluar(double latitud, double longitud, CriteriosClimaticos criterios,
                                            List<VentanaHoraria> ventanas) {
         if (ventanas.isEmpty()) {
-            throw new NegocioException("DATOS_INVALIDOS", "Hace falta al menos una ventana horaria",
-                    HttpStatus.BAD_REQUEST);
+            throw new NegocioException(HttpStatus.BAD_REQUEST, "DATOS_INVALIDOS",
+                    "Hace falta al menos una ventana horaria");
         }
         for (VentanaHoraria v : ventanas) {
             if (!v.fin().isAfter(v.inicio())) {
-                throw new NegocioException("DATOS_INVALIDOS",
-                        "La ventana que empieza " + v.inicio() + " termina antes de empezar",
-                        HttpStatus.BAD_REQUEST);
+                throw new NegocioException(HttpStatus.BAD_REQUEST, "DATOS_INVALIDOS",
+                    "La ventana que empieza " + v.inicio() + " termina antes de empezar");
             }
         }
         LocalDateTime desde = ventanas.stream().map(VentanaHoraria::inicio).min(Comparator.naturalOrder()).get();
@@ -62,8 +61,8 @@ public class EvaluacionClimaService {
     public List<HoraPronostico> pronostico(double latitud, double longitud, LocalDateTime desde,
                                            LocalDateTime hasta) {
         if (!hasta.isAfter(desde)) {
-            throw new NegocioException("DATOS_INVALIDOS", "'hasta' tiene que ser posterior a 'desde'",
-                    HttpStatus.BAD_REQUEST);
+            throw new NegocioException(HttpStatus.BAD_REQUEST, "DATOS_INVALIDOS",
+                    "'hasta' tiene que ser posterior a 'desde'");
         }
         return selector.actual().obtener(latitud, longitud, desde, hasta);
     }
