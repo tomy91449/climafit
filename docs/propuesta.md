@@ -225,8 +225,8 @@ Prioridad: **Alta** = imprescindible para el proceso central. **Media** = comple
 **RN10 — Evaluación del pronóstico**
 - Condición: se evalúa el pronóstico de las horas que dura la clase.
 - Comportamiento: se toman la mayor probabilidad de lluvia, la mayor lluvia en mm por hora, el mayor viento y la menor temperatura de esas horas, y si hay tormenta eléctrica. La lluvia solo cuenta si su probabilidad alcanza la de la actividad (`prob_lluvia_max`); por debajo, se considera que no va a llover.
-  - **NO_APTA:** la lluvia cuenta y supera los mm por hora que tolera la actividad (`lluvia_max_mm`), se supera el viento máximo, la temperatura queda por debajo de la mínima o hay tormenta eléctrica.
-  - **EN_RIESGO:** ningún límite se supera, pero algún valor queda cerca: la lluvia cuenta y supera la mitad de los mm tolerados, el viento queda a 10 km/h o menos del máximo, o la temperatura queda a 2 °C o menos de la mínima.
+  - **NO_APTA:** la lluvia cuenta y supera los mm por hora que tolera la actividad (`lluvia_max_mm_hora`), se supera el viento máximo, la temperatura queda por debajo de la mínima o hay tormenta eléctrica.
+  - **EN_RIESGO:** ningún límite se supera, pero algún valor queda cerca: la lluvia cuenta y llega al 80 % de los mm tolerados (margen del 20 %; con límite 0 no hay zona de riesgo), el viento queda a 10 km/h o menos del máximo, o la temperatura queda a 2 °C o menos de la mínima.
   - **APTA:** en cualquier otro caso.
 - Funcionalidad: F11.
 
@@ -650,7 +650,7 @@ erDiagram
     varchar nombre UK
     varchar descripcion
     int prob_lluvia_max "porcentaje 0-100"
-    decimal lluvia_max_mm "mm por hora tolerados"
+    decimal lluvia_max_mm_hora "mm por hora tolerados"
     int viento_max_kmh
     int temp_min_c
     boolean activo
@@ -729,7 +729,7 @@ erDiagram
     varchar resultado "APTA, EN_RIESGO, NO_APTA, FALLIDA"
     varchar motivo
     int prob_lluvia
-    decimal lluvia_mm
+    decimal precipitacion_mm
     int viento_kmh
     int temperatura_c
     boolean tormenta

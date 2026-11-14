@@ -1,10 +1,10 @@
 -- Datos iniciales con ids fijos (plan de trabajo, Fase 0, punto 10). La colección de Postman usa estos ids.
 
 -- prob_lluvia_max: probabilidad (%) a partir de la cual se considera que va a llover (80 % = "muy probable").
--- lluvia_max_mm: milímetros por hora que la actividad tolera. Por debajo de prob_lluvia_max la lluvia no se
--- mira. Por encima: si llueve más de lluvia_max_mm la clase se suspende; si llueve más de la mitad de lo
--- tolerado (sin superarlo) queda en riesgo y decide el profesor (RN10, ajustada después de la propuesta).
-INSERT INTO tipo_actividad (id, nombre, descripcion, prob_lluvia_max, lluvia_max_mm, viento_max_kmh, temp_min_c, activo) VALUES
+-- lluvia_max_mm_hora: milímetros por hora que la actividad tolera. Por debajo de prob_lluvia_max la lluvia no se
+-- mira. Por encima: si llueve más de lluvia_max_mm_hora la clase se suspende; si llega al 80 % de lo tolerado
+-- (margen del 20 %, sin superarlo) queda en riesgo y decide el profesor (RN10, ajustada después de la propuesta).
+INSERT INTO tipo_actividad (id, nombre, descripcion, prob_lluvia_max, lluvia_max_mm_hora, viento_max_kmh, temp_min_c, activo) VALUES
     (1, 'Yoga',            'Yoga al aire libre sobre mat',                             80, 0.5, 35,  5, TRUE),
     (2, 'Funcional',       'Entrenamiento funcional con peso corporal',                80, 2.0, 35,  5, TRUE),
     (3, 'Running',         'Grupo de running con distintos ritmos',                    80, 4.0, 40,  2, TRUE),

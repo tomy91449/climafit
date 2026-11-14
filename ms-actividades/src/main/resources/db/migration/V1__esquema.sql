@@ -6,7 +6,7 @@ CREATE TABLE tipo_actividad (
     nombre          VARCHAR(100) NOT NULL UNIQUE,
     descripcion     VARCHAR(500),
     prob_lluvia_max INT          NOT NULL CHECK (prob_lluvia_max BETWEEN 0 AND 100),
-    lluvia_max_mm   NUMERIC(4, 1) NOT NULL CHECK (lluvia_max_mm >= 0),
+    lluvia_max_mm_hora   NUMERIC(4, 1) NOT NULL CHECK (lluvia_max_mm_hora >= 0),
     viento_max_kmh  INT          NOT NULL CHECK (viento_max_kmh >= 0),
     temp_min_c      INT          NOT NULL,
     activo          BOOLEAN      NOT NULL DEFAULT TRUE

@@ -14,7 +14,7 @@ import java.math.BigDecimal;
  * si una clase es apta (RN10):
  * <ul>
  *   <li>lluvia: la clase no se dicta si es probable que llueva ({@code probLluviaMax}, en %) y además
- *       llueve más de lo que la actividad tolera ({@code lluviaMaxMm}, en mm por hora);</li>
+ *       llueve más de lo que la actividad tolera ({@code lluviaMaxMmHora}, en mm por hora);</li>
  *   <li>viento máximo y temperatura mínima.</li>
  * </ul>
  */
@@ -37,8 +37,8 @@ public class TipoActividad {
     private Integer probLluviaMax;
 
     /** Milímetros de lluvia por hora que la actividad tolera (0 = no tolera ninguna lluvia). */
-    @Column(name = "lluvia_max_mm", nullable = false, precision = 4, scale = 1)
-    private BigDecimal lluviaMaxMm;
+    @Column(name = "lluvia_max_mm_hora", nullable = false, precision = 4, scale = 1)
+    private BigDecimal lluviaMaxMmHora;
 
     @Column(name = "viento_max_kmh", nullable = false)
     private Integer vientoMaxKmh;
@@ -53,18 +53,18 @@ public class TipoActividad {
     protected TipoActividad() {
     }
 
-    public TipoActividad(String nombre, String descripcion, Integer probLluviaMax, BigDecimal lluviaMaxMm,
+    public TipoActividad(String nombre, String descripcion, Integer probLluviaMax, BigDecimal lluviaMaxMmHora,
                          Integer vientoMaxKmh, Integer tempMinC) {
-        actualizar(nombre, descripcion, probLluviaMax, lluviaMaxMm, vientoMaxKmh, tempMinC);
+        actualizar(nombre, descripcion, probLluviaMax, lluviaMaxMmHora, vientoMaxKmh, tempMinC);
         this.activo = Boolean.TRUE;
     }
 
-    public void actualizar(String nombre, String descripcion, Integer probLluviaMax, BigDecimal lluviaMaxMm,
+    public void actualizar(String nombre, String descripcion, Integer probLluviaMax, BigDecimal lluviaMaxMmHora,
                            Integer vientoMaxKmh, Integer tempMinC) {
         this.nombre = nombre;
         this.descripcion = descripcion;
         this.probLluviaMax = probLluviaMax;
-        this.lluviaMaxMm = lluviaMaxMm;
+        this.lluviaMaxMmHora = lluviaMaxMmHora;
         this.vientoMaxKmh = vientoMaxKmh;
         this.tempMinC = tempMinC;
     }
@@ -90,7 +90,7 @@ public class TipoActividad {
     }
 
     public BigDecimal getLluviaMaxMm() {
-        return lluviaMaxMm;
+        return lluviaMaxMmHora;
     }
 
     public Integer getVientoMaxKmh() {

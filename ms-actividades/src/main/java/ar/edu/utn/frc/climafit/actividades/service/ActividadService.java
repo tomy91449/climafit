@@ -41,7 +41,7 @@ public class ActividadService {
             throw nombreDuplicado();
         }
         TipoActividad actividad = new TipoActividad(pedido.nombre(), pedido.descripcion(),
-                pedido.probLluviaMax(), pedido.lluviaMaxMm(), pedido.vientoMaxKmh(), pedido.tempMinC());
+                pedido.probLluviaMax(), pedido.lluviaMaxMmHora(), pedido.vientoMaxKmh(), pedido.tempMinC());
         return ActividadResponse.de(repositorio.save(actividad));
     }
 
@@ -51,7 +51,7 @@ public class ActividadService {
             throw nombreDuplicado();
         }
         actividad.actualizar(pedido.nombre(), pedido.descripcion(), pedido.probLluviaMax(),
-                pedido.lluviaMaxMm(), pedido.vientoMaxKmh(), pedido.tempMinC());
+                pedido.lluviaMaxMmHora(), pedido.vientoMaxKmh(), pedido.tempMinC());
         return ActividadResponse.de(actividad);
     }
 

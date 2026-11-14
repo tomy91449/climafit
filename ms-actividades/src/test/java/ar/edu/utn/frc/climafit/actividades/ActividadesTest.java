@@ -21,7 +21,7 @@ class ActividadesTest extends PruebaIntegracion {
 
     private static final String PILATES = """
             {"nombre": "Pilates", "descripcion": "Pilates de suelo al aire libre",
-             "probLluviaMax": 60, "lluviaMaxMm": 0.5, "vientoMaxKmh": 25, "tempMinC": 12}
+             "probLluviaMax": 60, "lluviaMaxMmHora": 0.5, "vientoMaxKmh": 25, "tempMinC": 12}
             """;
 
     @Autowired
@@ -50,7 +50,7 @@ class ActividadesTest extends PruebaIntegracion {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nombre").value("Yoga"))
                 .andExpect(jsonPath("$.probLluviaMax").value(80))
-                .andExpect(jsonPath("$.lluviaMaxMm").value(0.5))
+                .andExpect(jsonPath("$.lluviaMaxMmHora").value(0.5))
                 .andExpect(jsonPath("$.vientoMaxKmh").value(35))
                 .andExpect(jsonPath("$.tempMinC").value(5))
                 .andExpect(jsonPath("$.activo").value(true));
@@ -66,7 +66,7 @@ class ActividadesTest extends PruebaIntegracion {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nombre").value("Patinaje"))
                 .andExpect(jsonPath("$.probLluviaMax").value(80))
-                .andExpect(jsonPath("$.lluviaMaxMm").value(0.1))
+                .andExpect(jsonPath("$.lluviaMaxMmHora").value(0.1))
                 .andExpect(jsonPath("$.vientoMaxKmh").value(60));
     }
 
@@ -111,19 +111,19 @@ class ActividadesTest extends PruebaIntegracion {
     @Test
     void criteriosInvalidosResponden400() throws Exception {
         String invalida = """
-                {"nombre": "Invalida", "descripcion": "x", "probLluviaMax": 150, "lluviaMaxMm": -1,
+                {"nombre": "Invalida", "descripcion": "x", "probLluviaMax": 150, "lluviaMaxMmHora": -1,
                  "vientoMaxKmh": -5, "tempMinC": 5}
                 """;
         mvc.perform(post("/actividades").with(admin()).contentType(MediaType.APPLICATION_JSON).content(invalida))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"))
-                .andExpect(jsonPath("$.campos.lluviaMaxMm").exists());
+                .andExpect(jsonPath("$.campos.lluviaMaxMmHora").exists());
     }
 
     @Test
     void unNombreRepetidoResponde400() throws Exception {
         String repetida = """
-                {"nombre": "yoga", "probLluviaMax": 10, "lluviaMaxMm": 1, "vientoMaxKmh": 10, "tempMinC": 10}
+                {"nombre": "yoga", "probLluviaMax": 10, "lluviaMaxMmHora": 1, "vientoMaxKmh": 10, "tempMinC": 10}
                 """;
         mvc.perform(post("/actividades").with(admin()).contentType(MediaType.APPLICATION_JSON).content(repetida))
                 .andExpect(status().isBadRequest())
@@ -134,13 +134,13 @@ class ActividadesTest extends PruebaIntegracion {
     void elAdminActualizaLosCriterios() throws Exception {
         String yogaCambiado = """
                 {"nombre": "Yoga", "descripcion": "Yoga al aire libre",
-                 "probLluviaMax": 70, "lluviaMaxMm": 1.0, "vientoMaxKmh": 20, "tempMinC": 14}
+                 "probLluviaMax": 70, "lluviaMaxMmHora": 1.0, "vientoMaxKmh": 20, "tempMinC": 14}
                 """;
         mvc.perform(put("/actividades/1").with(admin()).contentType(MediaType.APPLICATION_JSON)
                         .content(yogaCambiado))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.probLluviaMax").value(70))
-                .andExpect(jsonPath("$.lluviaMaxMm").value(1.0))
+                .andExpect(jsonPath("$.lluviaMaxMmHora").value(1.0))
                 .andExpect(jsonPath("$.tempMinC").value(14));
     }
 

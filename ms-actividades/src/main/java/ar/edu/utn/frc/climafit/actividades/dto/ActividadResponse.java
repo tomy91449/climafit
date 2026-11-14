@@ -10,7 +10,7 @@ public record ActividadResponse(
         String nombre,
         String descripcion,
         Integer probLluviaMax,
-        BigDecimal lluviaMaxMm,
+        BigDecimal lluviaMaxMmHora,
         Integer vientoMaxKmh,
         Integer tempMinC,
         Boolean activo) {
