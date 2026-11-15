@@ -10,7 +10,7 @@ Este documento reúne las respuestas del cuestionario de propuesta del Trabajo P
 
 - **Nombre del proyecto:** ClimaFit — Gestión de clases deportivas al aire libre con reprogramación según el clima
 - **Equipo:** Grupo 15 de Backend — ClimaFit
-- **Comisión:** [Ej.: 3K1]
+- **Comisión:** 3K9
 - **Integrantes:**
   - Tomas Julio — Legajo 91449
   - Reyna, Victoria Abril — Legajo 401298

@@ -81,8 +81,7 @@ Estados: ✅ verificado · ⚠️ funciona pero con una observación · ⏳ pend
 5. **Aviso a la cátedra.** El DER cambió respecto de la propuesta entregada: `tipo_actividad.lluvia_max_mm_hora`,
    `evaluacion_climatica.precipitacion_mm` y 5 actividades iniciales en lugar de 3. Los diagramas del
    repositorio ya están actualizados; falta avisar (documento de alcance de la cátedra, sección 9).
-6. **Propuesta, sección 01.** Falta la comisión.
-7. **Limpieza.** Borrar la rama vacía `persona3-actividades`; `docs/persona4/propuesta-cambios-dominio.md`
+6. **Limpieza.** Borrar la rama vacía `persona3-actividades`; `docs/persona4/propuesta-cambios-dominio.md`
    quedó reemplazado por `contratos.md`.
 
 ## 5. Cierre (plan de trabajo)
