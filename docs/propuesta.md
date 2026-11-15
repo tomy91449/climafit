@@ -9,14 +9,14 @@ Este documento reúne las respuestas del cuestionario de propuesta del Trabajo P
 ## Sección 01 — Identificación
 
 - **Nombre del proyecto:** ClimaFit — Gestión de clases deportivas al aire libre con reprogramación según el clima
-- **Equipo:** [Nombre o número de grupo]
+- **Equipo:** Grupo 15 de Backend — ClimaFit
 - **Comisión:** [Ej.: 3K1]
 - **Integrantes:**
   - Tomas Julio — Legajo 91449
   - Reyna, Victoria Abril — Legajo 401298
   - Cassidy, Tomás — Legajo 90852
   - Ferretti, Mauricio — Legajo 48233
-- **Responsable de contacto:** [Nombre Apellido] — [email institucional]
+- **Responsable de contacto:** Reyna, Victoria Abril
 - **Repositorio principal:** <https://github.com/tomy91449/climafit>. Es un repositorio único con una carpeta por componente (`climafit-commons`, `api-gateway`, `ms-actividades`, `ms-clases`, `ms-clima`, `ms-notificaciones`), la infraestructura (`infra/`), el `docker-compose.yml`, la colección de Postman y la documentación.
 
 ---
