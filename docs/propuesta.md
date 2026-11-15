@@ -12,12 +12,12 @@ Este documento reúne las respuestas del cuestionario de propuesta del Trabajo P
 - **Equipo:** [Nombre o número de grupo]
 - **Comisión:** [Ej.: 3K1]
 - **Integrantes:**
-  - [Nombre Apellido] — Legajo [xxxxx]
-  - [Nombre Apellido] — Legajo [xxxxx]
-  - [Nombre Apellido] — Legajo [xxxxx]
-  - [Nombre Apellido] — Legajo [xxxxx]
+  - Tomas Julio — Legajo 91449
+  - Reyna, Victoria Abril — Legajo 401298
+  - Cassidy, Tomás — Legajo 90852
+  - Ferretti, Mauricio — Legajo 48233
 - **Responsable de contacto:** [Nombre Apellido] — [email institucional]
-- **Repositorio principal:** [URL del repositorio]. Es un repositorio único con una carpeta por componente (`climafit-commons`, `api-gateway`, `ms-actividades`, `ms-clases`, `ms-clima`, `ms-notificaciones`), la infraestructura (`infra/`), el `docker-compose.yml`, la colección de Postman y la documentación.
+- **Repositorio principal:** <https://github.com/tomy91449/climafit>. Es un repositorio único con una carpeta por componente (`climafit-commons`, `api-gateway`, `ms-actividades`, `ms-clases`, `ms-clima`, `ms-notificaciones`), la infraestructura (`infra/`), el `docker-compose.yml`, la colección de Postman y la documentación.
 
 ---
 
