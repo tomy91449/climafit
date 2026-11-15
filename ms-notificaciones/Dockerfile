@@ -7,10 +7,10 @@ FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /build
 # 1) Instalar la librería común en el .m2 de la imagen de build
 COPY climafit-commons climafit-commons
-RUN --mount=type=cache,target=/root/.m2 mvn -q -f climafit-commons/pom.xml install -DskipTests
+RUN --mount=type=cache,target=/root/.m2,sharing=locked mvn -q -f climafit-commons/pom.xml install -DskipTests
 # 2) Compilar el microservicio (usa la librería recién instalada como dependencia Maven)
 COPY ms-notificaciones ms-notificaciones
-RUN --mount=type=cache,target=/root/.m2 mvn -q -f ms-notificaciones/pom.xml package -DskipTests
+RUN --mount=type=cache,target=/root/.m2,sharing=locked mvn -q -f ms-notificaciones/pom.xml package -DskipTests
 
 # ---- Etapa 2: imagen final, solo con el JRE y el .jar ----
 FROM eclipse-temurin:21-jre
