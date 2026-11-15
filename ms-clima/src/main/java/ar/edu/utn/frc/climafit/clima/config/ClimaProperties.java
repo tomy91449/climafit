@@ -12,7 +12,7 @@ public record ClimaProperties(
         @DefaultValue("https://api.open-meteo.com") String openmeteoUrl,
         @DefaultValue("30") int cacheMinutos,
         @DefaultValue("2") int timeoutConexionSeg,
-        @DefaultValue("5") int timeoutLecturaSeg,
+        @DefaultValue("10") int timeoutLecturaSeg,
         @DefaultValue("10") int margenLluviaPuntos,
         @DefaultValue("10") int margenVientoKmh,
         @DefaultValue("2") int margenTemperaturaC,

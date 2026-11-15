@@ -16,6 +16,9 @@ import org.springframework.security.oauth2.client.OAuth2AuthorizedClientManager;
 import org.springframework.security.oauth2.core.OAuth2AuthorizationException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Cliente real de ms-clima: POST /internal/evaluaciones.
@@ -41,7 +44,9 @@ public class ClimaClientHttp implements ClimaClient {
                            @Value("${climafit.clients.clima-url}") String url) {
         JdkClientHttpRequestFactory fabrica = new JdkClientHttpRequestFactory(
                 HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build());
-        fabrica.setReadTimeout(Duration.ofSeconds(5));
+        // Más que los 10 s que ms-clima le espera a Open-Meteo: si no, ms-clases cortaría primero y se
+        // perdería el mensaje de ms-clima ("reintentá o comprobá tu conexión").
+        fabrica.setReadTimeout(Duration.ofSeconds(15));
         this.http = builder.baseUrl(url)
                 .requestFactory(fabrica)
                 .requestInterceptor((request, body, execution) -> {
@@ -81,8 +86,29 @@ public class ClimaClientHttp implements ClimaClient {
                 throw new ServicioNoDisponibleException("ms-clima devolvió una respuesta incompleta");
             }
             return r.evaluaciones();
+        } catch (RestClientResponseException e) {
+            // ms-clima respondió con error (por ejemplo 503 porque Open-Meteo tardó más de 10 s):
+            // se reenvía SU mensaje, que es el que le dice al usuario qué hacer.
+            throw new ServicioNoDisponibleException(mensajeDeClima(e), e);
         } catch (RestClientException e) {
-            throw new ServicioNoDisponibleException("No se pudo consultar ms-clima", e);
+            throw new ServicioNoDisponibleException(
+                    "El servicio de clima no respondió a tiempo. Reintentá en unos minutos.", e);
         }
     }
+
+    /** Lee el campo "mensaje" del formato común de error; si no viene, arma uno genérico. */
+    private static String mensajeDeClima(RestClientResponseException e) {
+        try {
+            JsonNode cuerpo = LECTOR_JSON.readTree(e.getResponseBodyAsString());
+            if (cuerpo != null && cuerpo.hasNonNull("mensaje")) {
+                return cuerpo.get("mensaje").asText();
+            }
+        } catch (Exception ignorada) {
+            // el cuerpo no era JSON: se usa el mensaje genérico
+        }
+        return "El servicio de clima respondió con un error (" + e.getStatusCode().value()
+                + "). Reintentá en unos minutos.";
+    }
+
+    private static final ObjectMapper LECTOR_JSON = new ObjectMapper();
 }

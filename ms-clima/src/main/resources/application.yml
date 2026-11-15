@@ -44,7 +44,8 @@ climafit:
     openmeteo-url: https://api.open-meteo.com
     cache-minutos: 30
     timeout-conexion-seg: 2
-    timeout-lectura-seg: 5
+    # Si Open-Meteo tarda más que esto, se corta y se responde 503 pidiendo reintentar o revisar la conexión.
+    timeout-lectura-seg: 10
     margen-lluvia-puntos: 10
     margen-viento-kmh: 10
     margen-temperatura-c: 2
