@@ -7,8 +7,8 @@ Paquetes de la Persona 4 (no tocar): `evaluacion`, `reprogramacion`, `tarea`, `c
 ## Cómo correrlo
 
 ```bash
-# 1) Instalar climafit-commons (Persona 2) o, mientras no esté, la versión provisoria de esta carpeta:
-mvn -f ../_commons-provisorio/pom.xml install
+# 1) Instalar climafit-commons en el repositorio local de Maven:
+mvn -f ../climafit-commons/pom.xml install
 # 2) Tests (usan H2 en modo PostgreSQL y los clientes falsos, no necesitan nada más):
 mvn test
 # 3) Arrancar sin ms-actividades ni ms-notificaciones (clientes falsos):
@@ -42,11 +42,11 @@ Los avisos se mandan **después** de confirmar la transacción: una llamada HTTP
 | RN07 rutina compatible (la valido yo, la regla es de la P2) | `ClaseService.verificarRutina` | `rn07_*` |
 | RN16 avisos pendientes | `AvisoService` | `rn16_*` |
 
-## Estado de la verificación (leer)
+## Integración con climafit-commons
 
-- **No pude ejecutar `mvn test` en el entorno donde se escribió**: no tiene acceso a Maven Central. Se revisó el código a mano contra el plan y se comprobó que no tiene errores de sintaxis, pero **el primer `mvn test` en tu máquina es la verificación real**. Si algo falla, pasame el error y lo corrijo.
-- `climafit-commons` todavía no existe (es de la Persona 2). `_commons-provisorio/` es un reemplazo mínimo mío para poder compilar: **hay que borrarlo cuando la Persona 2 publique el real**, y ahí pueden cambiar nombres de clases o métodos (`NegocioException`, `UsuarioActual`...).
-- `ActividadesClientReal` y `NotificacionesClientReal` hoy arman su propio `RestClient` sin token de servicio ni timeouts: hay que enchufar la fábrica de commons (marcado con `TODO`).
+- `ActividadesClientReal` y `NotificacionesClientReal` usan `ClienteServicioFactory`, que agrega el token de servicio, los timeouts (2 s / 5 s), los reintentos de lecturas y el correlation id. Cualquier falla de red o timeout se traduce en 503 `SERVICIO_NO_DISPONIBLE`.
+- `ClimaClientHttp` arma su propio cliente porque necesita esperar más (15 s): ms-clima le da hasta 10 s a Open-Meteo.
+- El `OAuth2AuthorizedClientManager` del token de servicio lo crea commons (`ClimafitHttpAutoConfiguration`).
 
 ## Para charlar con el equipo (nada se inventa)
 
