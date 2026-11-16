@@ -6,8 +6,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 /**
@@ -38,8 +38,9 @@ public class NotificacionesClientReal implements NotificacionesClient {
         } catch (RestClientResponseException e) {
             throw new ServicioNoDisponibleException(
                     "ms-notificaciones respondió " + e.getStatusCode().value(), e);
-        } catch (ResourceAccessException e) {
-            throw new ServicioNoDisponibleException("No se pudo conectar con ms-notificaciones", e);
+        } catch (RestClientException e) {
+            // Sin conexión, timeout (también a mitad de la respuesta) o respuesta ilegible.
+            throw new ServicioNoDisponibleException("ms-notificaciones no respondió a tiempo o no se pudo conectar", e);
         }
     }
 }

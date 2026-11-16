@@ -8,8 +8,8 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 
 import java.util.List;
@@ -54,7 +54,10 @@ public class ActividadesClientReal implements ActividadesClient {
                         .retrieve().body(CompatibilidadDto.class));
     }
 
-    /** Traduce los errores de HTTP: 404 -> NO_ENCONTRADO; cualquier otro problema -> SERVICIO_NO_DISPONIBLE (503). */
+    /**
+     * Traduce los errores de HTTP: 404 -> NO_ENCONTRADO; cualquier otro problema -> SERVICIO_NO_DISPONIBLE (503).
+     * RestClientResponseException tiene que ir antes que RestClientException, que es su clase padre.
+     */
     private <T> T llamar(String que, Supplier<T> llamada) {
         try {
             T resultado = llamada.get();
@@ -68,8 +71,10 @@ public class ActividadesClientReal implements ActividadesClient {
             }
             throw new ServicioNoDisponibleException(
                     "ms-actividades respondió " + e.getStatusCode().value() + " al consultar " + que, e);
-        } catch (ResourceAccessException e) {
-            throw new ServicioNoDisponibleException("No se pudo conectar con ms-actividades", e);
+        } catch (RestClientException e) {
+            // Sin conexión, timeout (también a mitad de la respuesta) o respuesta ilegible.
+            throw new ServicioNoDisponibleException(
+                    "ms-actividades no respondió a tiempo o no se pudo conectar al consultar " + que, e);
         }
     }
 }
