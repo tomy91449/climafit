@@ -33,6 +33,8 @@ docker compose ps             # esperar a que todo diga (healthy)
 ```
 
 - API: `http://localhost:8080/api/...`
+- Swagger UI unificado: `http://localhost:8080/swagger-ui.html` (arriba a la derecha se elige el microservicio;
+  para ejecutar un endpoint, botón **Authorize** con un token de Keycloak)
 - Consola de Keycloak: `http://localhost:8090` (usuario `admin` / `admin`)
 
 Para empezar de cero (borra las bases): `docker compose down -v`.

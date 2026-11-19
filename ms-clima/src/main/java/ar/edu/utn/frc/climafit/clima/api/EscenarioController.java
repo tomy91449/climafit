@@ -1,5 +1,7 @@
 package ar.edu.utn.frc.climafit.clima.api;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import ar.edu.utn.frc.climafit.clima.fuente.FuenteSimulada;
 import ar.edu.utn.frc.climafit.clima.modelo.Escenario;
 import ar.edu.utn.frc.climafit.commons.error.NegocioException;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /** Escenarios de clima simulado. Solo existe en el perfil demo. */
+@Tag(name = "Simulación (perfil demo)", description = "Herramientas para la demo: modo del pronóstico y escenarios")
 @RestController
 @RequestMapping("/clima/escenarios")
 @Profile("demo")
@@ -45,6 +48,7 @@ public class EscenarioController {
         this.fuente = fuente;
     }
 
+    @Operation(summary = "Cargar un escenario de clima simulado para una ubicación y un rango horario")
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasRole('ADMIN')")
@@ -60,6 +64,7 @@ public class EscenarioController {
                 e.vientoKmh(), e.temperaturaC(), e.tormenta(), mm);
     }
 
+    @Operation(summary = "Borrar todos los escenarios simulados")
     @DeleteMapping
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")

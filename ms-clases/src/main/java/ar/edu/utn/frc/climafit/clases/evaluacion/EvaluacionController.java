@@ -1,5 +1,7 @@
 package ar.edu.utn.frc.climafit.clases.evaluacion;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import ar.edu.utn.frc.climafit.clases.clase.Clase;
 import ar.edu.utn.frc.climafit.clases.clase.ClaseRepository;
 import ar.edu.utn.frc.climafit.commons.error.RecursoNoEncontradoException;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /** Endpoints de evaluación climática de ms-clases (tarea 4.8). */
+@Tag(name = "Evaluación climática", description = "Evaluación del pronóstico y decisión automática (RN09, RN10, RN11, RN16)")
 @RestController
 @RequestMapping("/clases")
 public class EvaluacionController {
@@ -49,6 +52,7 @@ public class EvaluacionController {
     }
 
     /** Evalúa el clima de una clase y aplica la decisión. Siempre 200, también si es FALLIDA. */
+    @Operation(summary = "Evaluar ahora el clima de una clase y aplicar la decisión (siempre 200, también si es FALLIDA)")
     @PostMapping("/{id}/evaluaciones")
     @PreAuthorize("hasAnyRole('PROFESOR','ADMIN')")
     public EvaluacionRespuesta evaluar(@PathVariable Long id) {
@@ -57,6 +61,7 @@ public class EvaluacionController {
         return evaluacion.evaluarManual(clase, usuario.id());   // RN09 -> 409 CLASE_NO_EVALUABLE
     }
 
+    @Operation(summary = "Consultar las evaluaciones climáticas registradas de una clase")
     @GetMapping("/{id}/evaluaciones")
     @PreAuthorize("hasAnyRole('PROFESOR','ADMIN')")
     public List<EvaluacionRegistradaDto> listar(@PathVariable Long id) {
@@ -66,6 +71,7 @@ public class EvaluacionController {
     }
 
     /** Evaluación general de las próximas 24 h (misma lógica que la tarea programada). */
+    @Operation(summary = "Evaluar todas las clases al aire libre de las próximas 24 h (igual que la tarea programada)")
     @PostMapping("/evaluaciones")
     @PreAuthorize("hasRole('ADMIN')")
     public ResumenEvaluacionGeneral evaluarTodas() {

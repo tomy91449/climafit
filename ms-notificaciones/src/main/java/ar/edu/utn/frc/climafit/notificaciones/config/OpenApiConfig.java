@@ -1,0 +1,33 @@
+package ar.edu.utn.frc.climafit.notificaciones.config;
+
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/**
+ * Documentación OpenAPI con el botón "Authorize" para pegar el token de Keycloak.
+ * El Swagger UI unificado del gateway muestra esta misma documentación.
+ */
+@Configuration
+public class OpenApiConfig {
+
+    private static final String ESQUEMA = "bearer-jwt";
+
+    @Bean
+    public OpenAPI openApiNotificaciones() {
+        return new OpenAPI()
+                .info(new Info()
+                        .title("ClimaFit · ms-notificaciones")
+                        .version("1.0.0")
+                        .description("Contactos y consentimiento, y avisos por WhatsApp con reintentos y sin duplicados."))
+                .components(new Components().addSecuritySchemes(ESQUEMA, new SecurityScheme()
+                        .type(SecurityScheme.Type.HTTP)
+                        .scheme("bearer")
+                        .bearerFormat("JWT")))
+                .addSecurityItem(new SecurityRequirement().addList(ESQUEMA));
+    }
+}

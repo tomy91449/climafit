@@ -55,6 +55,10 @@ public class SeguridadGatewayConfig {
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(rutas -> rutas
                         .pathMatchers("/actuator/health/**").permitAll()
+                        // Swagger UI unificado y la documentación OpenAPI de cada servicio: son públicos,
+                        // como en los microservicios. Para EJECUTAR un endpoint igual hace falta el token.
+                        .pathMatchers(HttpMethod.GET, "/swagger-ui.html", "/swagger-ui/**", "/webjars/**",
+                                "/v3/api-docs/**", "/docs/**").permitAll()
 
                         // Catálogo (ms-actividades): todos leen, solo ADMIN modifica actividades y espacios
                         .pathMatchers(HttpMethod.POST, "/api/actividades/**", "/api/espacios/**").hasRole(ADMIN)
