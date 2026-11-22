@@ -1,6 +1,7 @@
 package ar.edu.utn.frc.climafit.notificaciones.telegram;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,6 +15,7 @@ import org.springframework.web.client.RestClientResponseException;
 
 import java.time.Duration;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Envío real con la Bot API de Telegram, sin SDK: un POST con JSON.
@@ -24,6 +26,9 @@ import java.util.Map;
  * </pre>
  * El message_id se guarda como id del proveedor. El texto va sin {@code parse_mode}: se manda tal
  * cual, sin interpretar Markdown ni HTML.
+ * <p>
+ * El usuario del bot (para el link de vinculación) no se configura: se le pregunta a Telegram con
+ * {@code getMe}. Así el link siempre lleva al bot dueño del token y nunca al de otra persona.
  * <p>
  * <b>El token del bot es un secreto y viaja en la URL.</b> Los errores de {@link RestClient} incluyen
  * la URL en su mensaje, y ese mensaje termina en {@code notificacion.ultimo_error}, que se puede ver
@@ -38,6 +43,9 @@ public class ProveedorTelegramBot implements ProveedorTelegram {
 
     private final RestClient restClient;
     private final String token;
+
+    /** Usuario del bot según getMe. Null mientras Telegram no haya respondido. */
+    private volatile String usuario;
 
     public ProveedorTelegramBot(RestClient.Builder builder,
                                 @Value("${climafit.telegram.bot.url}") String url,
@@ -58,6 +66,34 @@ public class ProveedorTelegramBot implements ProveedorTelegram {
         this.token = token;
     }
 
+    /**
+     * Al arrancar se confirma el token con getMe. Un token inválido frena el arranque con un mensaje
+     * claro. Si Telegram no responde (sin Internet, por ejemplo), el servicio arranca igual y vuelve
+     * a preguntar la primera vez que haga falta armar un link.
+     */
+    @PostConstruct
+    void comprobarBot() {
+        try {
+            usuario = consultarUsuario();
+            log.info("Bot de Telegram listo: @{}", usuario);
+        } catch (EnvioTelegramException ex) {
+            log.warn("No se pudo consultar el bot de Telegram al arrancar; se reintenta al pedir un link: {}",
+                    ex.getMessage());
+        }
+    }
+
+    @Override
+    public Optional<String> usuarioBot() {
+        if (usuario == null) {
+            try {
+                usuario = consultarUsuario();
+            } catch (RuntimeException ex) {
+                log.warn("No se pudo consultar el bot de Telegram: {}", ex.getMessage());
+            }
+        }
+        return Optional.ofNullable(usuario);
+    }
+
     @Override
     public String enviar(String chatId, String mensaje) {
         JsonNode respuesta;
@@ -69,20 +105,21 @@ public class ProveedorTelegramBot implements ProveedorTelegram {
                     .retrieve()
                     .body(JsonNode.class);
         } catch (RestClientResponseException ex) {
-            // Telegram respondió con error: chat inexistente, el usuario bloqueó al bot o nunca le
-            // escribió (403 "bot can't initiate conversation with a user"), token inválido (401)...
-            throw new EnvioTelegramException(sinToken("Telegram respondió " + ex.getStatusCode().value() + ": "
-                    + descripcion(ex)));
+            int status = ex.getStatusCode().value();
+            String texto = sinToken("Telegram respondió " + status + ": " + descripcion(ex));
+            if (chatInaccesible(status, descripcion(ex))) {
+                // 403: el usuario bloqueó al bot. 400 "chat not found": el chat ya no existe.
+                throw new ChatInaccesibleException(texto);
+            }
+            // Token inválido (401), demasiados pedidos (429), Telegram caído (5xx)...
+            throw new EnvioTelegramException(texto);
         } catch (RestClientException ex) {
             // Timeout o sin conexión. Sin la causa: su mensaje trae la URL con el token.
             throw new EnvioTelegramException(sinToken("No se pudo contactar a Telegram: " + ex.getMessage()));
         }
 
-        if (respuesta == null || !respuesta.path("ok").asBoolean(false)) {
-            String detalle = respuesta == null ? "respuesta vacía" : respuesta.path("description").asText("sin detalle");
-            throw new EnvioTelegramException(sinToken("Telegram no confirmó el envío: " + detalle));
-        }
-        String id = respuesta.path("result").path("message_id").asText(null);
+        JsonNode resultado = exigirOk(respuesta, "Telegram no confirmó el envío");
+        String id = resultado.path("message_id").asText(null);
         log.info("Telegram enviado al chat {} (message_id {})", chatId, id);
         return id;
     }
@@ -110,11 +147,50 @@ public class ProveedorTelegramBot implements ProveedorTelegram {
         } catch (RestClientException ex) {
             throw new EnvioTelegramException(sinToken("No se pudo contactar a Telegram: " + ex.getMessage()));
         }
+        return exigirOk(respuesta, "Telegram no devolvió los mensajes");
+    }
+
+    /**
+     * Usuario del bot dueño del token (getMe).
+     *
+     * @throws IllegalStateException  si Telegram rechaza el token (401 o 404): es un error de configuración
+     * @throws EnvioTelegramException si Telegram no respondió o respondió otro error
+     */
+    String consultarUsuario() {
+        JsonNode respuesta;
+        try {
+            respuesta = restClient.get()
+                    .uri("/bot{token}/getMe", token)
+                    .retrieve()
+                    .body(JsonNode.class);
+        } catch (RestClientResponseException ex) {
+            int status = ex.getStatusCode().value();
+            String texto = sinToken("Telegram respondió " + status + ": " + descripcion(ex));
+            if (status == 401 || status == 404) {
+                throw new IllegalStateException("TELEGRAM_BOT_TOKEN no es válido. " + texto);
+            }
+            throw new EnvioTelegramException(texto);
+        } catch (RestClientException ex) {
+            throw new EnvioTelegramException(sinToken("No se pudo contactar a Telegram: " + ex.getMessage()));
+        }
+        String nombre = exigirOk(respuesta, "Telegram no devolvió los datos del bot").path("username").asText("");
+        if (nombre.isBlank()) {
+            throw new EnvioTelegramException("Telegram no devolvió el usuario del bot");
+        }
+        return nombre;
+    }
+
+    /** Devuelve el campo "result" si la respuesta dice ok: true; si no, un error con la descripción. */
+    private JsonNode exigirOk(JsonNode respuesta, String contexto) {
         if (respuesta == null || !respuesta.path("ok").asBoolean(false)) {
             String detalle = respuesta == null ? "respuesta vacía" : respuesta.path("description").asText("sin detalle");
-            throw new EnvioTelegramException(sinToken("Telegram no devolvió los mensajes: " + detalle));
+            throw new EnvioTelegramException(sinToken(contexto + ": " + detalle));
         }
         return respuesta.path("result");
+    }
+
+    private static boolean chatInaccesible(int status, String descripcion) {
+        return status == 403 || (status == 400 && descripcion != null && descripcion.contains("chat not found"));
     }
 
     /** Telegram explica el error en el campo "description" del cuerpo. */

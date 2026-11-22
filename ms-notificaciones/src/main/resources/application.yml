@@ -57,8 +57,6 @@ climafit:
       url: https://api.telegram.org
       # Token que entrega @BotFather. Es un secreto: va solo en el .env, nunca en el código.
       token: ${TELEGRAM_BOT_TOKEN:}
-      # Usuario del bot (sin @). Arma el link de vinculación t.me/<usuario>?start=<código>.
-      usuario: ${TELEGRAM_BOT_USUARIO:ClimaFitBot}
     vinculacion:
       # Cuánto dura el link de vinculación y cada cuánto se leen los mensajes del bot (solo con "bot").
       vigencia: PT24H

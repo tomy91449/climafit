@@ -29,7 +29,7 @@ Estados: ✅ verificado · ⚠️ funciona pero con una observación · ⏳ pend
 | API pública externa (Open-Meteo) en la decisión de negocio | Persona 4 | Carpeta 10: pronóstico real en modo REAL | ✅ |
 | Librería `climafit-commons` en `.m2`, usada por 4 microservicios | Persona 2 | Dependencia en los 4 `pom.xml`; Dockerfiles multi-etapa que la instalan antes de compilar | ✅ |
 | PostgreSQL, una base por servicio | Persona 1 | `infra/postgres/init.sh` crea un usuario por base, dueño solo de ella. En `postgres-actividades`: `actividades_db`. En `postgres`: `clases_db`, `notificaciones_db` y `keycloak_db` | ⏳ volver a verificar con dos contenedores |
-| APIs REST documentadas con OpenAPI | Cada dueño; Persona 1 el Swagger unificado | Swagger UI unificado en `http://localhost:8080/swagger-ui.html` con los 4 servicios (39 endpoints: 15 + 15 + 5 + 4), todos con descripción y botón Authorize | ✅ |
+| APIs REST documentadas con OpenAPI | Cada dueño; Persona 1 el Swagger unificado | Swagger UI unificado en `http://localhost:8080/swagger-ui.html` con los 4 servicios (40 endpoints: 15 + 15 + 5 + 5), todos con descripción y botón Authorize | ✅ |
 | Despliegue completo con Docker Compose | Persona 1 | CP7: los 8 contenedores (con `postgres-actividades`) quedan `healthy` sin pasos manuales | ⏳ volver a verificar con dos contenedores |
 
 ## 2. Reglas de negocio

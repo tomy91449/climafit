@@ -634,6 +634,7 @@ Abreviaturas de la columna Seguridad:
 |---|---|---|---|---|---|
 | ms-notificaciones | Contactos | PUT | /contactos/mio | Aceptar o rechazar los avisos; devuelve el link para vincular Telegram | Autenticado |
 | ms-notificaciones | Contactos | GET | /contactos/mio | Consultar las preferencias de contacto propias | Autenticado |
+| ms-notificaciones | Contactos | POST | /contactos/mio/vinculacion | Pedir un link nuevo para vincular o cambiar la cuenta de Telegram | Autenticado |
 | ms-notificaciones | Notificaciones | GET | /notificaciones?claseId= | Consultar las notificaciones generadas para una clase y su estado | PROFESOR (de esa clase) / ADMIN |
 | ms-notificaciones | Notificaciones | POST | /internal/notificaciones | Registrar un evento de clase y programar el envío a cada destinatario (RN14, RN15) | Servicio (no expuesto en el gateway) |
 
@@ -658,6 +659,7 @@ sequenceDiagram
     Note over U,DB: 1. Pedir el link (F10, RN14)
     U->>GW: PUT /api/contactos/mio {"aceptaTelegram": true} + JWT
     GW->>N: PUT /contactos/mio (valida JWT y rol)
+    N->>T: getMe (una vez): usuario del bot dueño del token
     N->>DB: guarda el consentimiento y un código aleatorio<br/>(un solo uso, vence en 24 h)
     N-->>U: 200 {vinculado: false, linkVinculacion: t.me/#lt;bot#gt;?start=#lt;código#gt;}
   end
@@ -673,6 +675,9 @@ sequenceDiagram
     alt código válido
       N->>DB: guarda el chat_id en el contacto y borra el código
       N->>T: sendMessage "¡Listo! Tu Telegram quedó vinculado"
+      opt era un cambio de cuenta
+        N->>T: sendMessage al chat anterior: "los avisos pasan a otro Telegram"
+      end
     else vencido, ya usado o inexistente
       N->>T: sendMessage "Este link no es válido o ya venció"
     end
@@ -687,12 +692,25 @@ sequenceDiagram
     T-->>U: aviso en Telegram
     N->>DB: notificación ENVIADA, OMITIDA o FALLIDA
   end
+
+  rect rgb(252, 228, 236)
+    Note over U,T: 4. Cambiar de cuenta o bot bloqueado
+    U->>GW: POST /api/contactos/mio/vinculacion + JWT
+    GW->>N: POST /contactos/mio/vinculacion
+    N-->>U: 200 link nuevo (el chat actual sigue recibiendo avisos<br/>hasta el /start del nuevo, que repite el paso 2)
+    N->>T: sendMessage(chat_id, aviso)
+    T-->>N: 403 bot was blocked by the user
+    N->>DB: notificación FALLIDA sin reintentar y se desvincula el chat<br/>(al volver a aceptar, recibe un link nuevo)
+  end
 ```
 
 - Telegram no permite que un bot inicie una conversación: así evita el spam y que el bot termine bloqueado. Por eso el usuario abre el link y toca "Iniciar", una sola vez.
 - El código del link es aleatorio, de un solo uso y vence en 24 h. Si el usuario rechaza los avisos, el código se anula.
 - Con el chat guardado, ms-notificaciones usa ese mismo chat para todos los avisos: suspensión, reprogramación, clase sin fecha, cancelación y, al profesor, la alerta de riesgo.
-- Con el proveedor `log` (demo) no se lee nada de Telegram: el chat se carga a mano con `telegramChatId`.
+- El nombre del bot no se configura: ms-notificaciones se lo pregunta a Telegram (`getMe`) con el token. Así el link siempre lleva al bot correcto, y un token inválido frena el arranque.
+- Para cambiar de cuenta, `POST /contactos/mio/vinculacion` da un link nuevo aunque ya esté vinculado. El chat actual sigue recibiendo los avisos hasta el nuevo /start, y el bot le avisa al chat viejo del cambio.
+- Si el usuario bloquea al bot, Telegram responde 403: la notificación queda FALLIDA sin reintentar y el chat se desvincula. Al volver a aceptar los avisos recibe un link nuevo.
+- Con el proveedor `log` (demo) no hay bot real: no se genera link y el chat se carga a mano con `telegramChatId`.
 
 Cada microservicio documenta su API con OpenAPI (springdoc). El gateway publica un Swagger UI unificado en `http://localhost:8080/swagger-ui.html`. Todos los errores usan el formato común de `climafit-commons`: `status`, `codigo`, `mensaje`, `ruta`, `correlationId` y `fecha`.
 

@@ -2,6 +2,7 @@ package ar.edu.utn.frc.climafit.notificaciones.telegram;
 
 import ar.edu.utn.frc.climafit.notificaciones.servicio.ContactoService;
 import ar.edu.utn.frc.climafit.notificaciones.servicio.ContactoService.ResultadoVinculacion;
+import ar.edu.utn.frc.climafit.notificaciones.servicio.ContactoService.Vinculacion;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,6 +33,9 @@ class VinculacionTelegramTest {
         vinculacion = new VinculacionTelegram(bot, contactos);
     }
 
+    private static final Vinculacion VINCULADO = new Vinculacion(ResultadoVinculacion.VINCULADO, null);
+    private static final Vinculacion INVALIDO = new Vinculacion(ResultadoVinculacion.CODIGO_INVALIDO, null);
+
     private static JsonNode actualizaciones(String json) throws Exception {
         return JSON.readTree(json);
     }
@@ -46,7 +50,7 @@ class VinculacionTelegramTest {
     void startConCodigoValidoVinculaYConfirma() throws Exception {
         when(bot.obtenerActualizaciones(0)).thenReturn(actualizaciones(
                 "[" + mensaje(10, "8246838480", "private", "/start ABC123") + "]"));
-        when(contactos.vincular("ABC123", "8246838480")).thenReturn(ResultadoVinculacion.VINCULADO);
+        when(contactos.vincular("ABC123", "8246838480")).thenReturn(VINCULADO);
 
         vinculacion.revisarMensajes();
 
@@ -55,10 +59,36 @@ class VinculacionTelegramTest {
     }
 
     @Test
+    void alCambiarDeCuentaLeAvisaAlChatAnterior() throws Exception {
+        when(bot.obtenerActualizaciones(0)).thenReturn(actualizaciones(
+                "[" + mensaje(10, "222", "private", "/start NUEVO") + "]"));
+        when(contactos.vincular("NUEVO", "222"))
+                .thenReturn(new Vinculacion(ResultadoVinculacion.VINCULADO, "111"));
+
+        vinculacion.revisarMensajes();
+
+        verify(bot).enviar("222", VinculacionTelegram.MENSAJE_VINCULADO);
+        verify(bot).enviar("111", VinculacionTelegram.MENSAJE_CUENTA_CAMBIADA);
+    }
+
+    @Test
+    void siVuelveAVincularElMismoChatNoHayAvisoDeCambio() throws Exception {
+        when(bot.obtenerActualizaciones(0)).thenReturn(actualizaciones(
+                "[" + mensaje(10, "111", "private", "/start OTRO") + "]"));
+        when(contactos.vincular("OTRO", "111"))
+                .thenReturn(new Vinculacion(ResultadoVinculacion.VINCULADO, "111"));
+
+        vinculacion.revisarMensajes();
+
+        verify(bot).enviar("111", VinculacionTelegram.MENSAJE_VINCULADO);
+        verify(bot, never()).enviar("111", VinculacionTelegram.MENSAJE_CUENTA_CAMBIADA);
+    }
+
+    @Test
     void codigoInvalidoAvisaQueHayQueGenerarOtro() throws Exception {
         when(bot.obtenerActualizaciones(0)).thenReturn(actualizaciones(
                 "[" + mensaje(10, "1", "private", "/start VENCIDO") + "]"));
-        when(contactos.vincular("VENCIDO", "1")).thenReturn(ResultadoVinculacion.CODIGO_INVALIDO);
+        when(contactos.vincular("VENCIDO", "1")).thenReturn(INVALIDO);
 
         vinculacion.revisarMensajes();
 
@@ -128,7 +158,7 @@ class VinculacionTelegramTest {
     void siNoPuedeResponderLaVinculacionIgualQuedaHecha() throws Exception {
         when(bot.obtenerActualizaciones(0)).thenReturn(actualizaciones(
                 "[" + mensaje(10, "1", "private", "/start ABC") + "]"));
-        when(contactos.vincular("ABC", "1")).thenReturn(ResultadoVinculacion.VINCULADO);
+        when(contactos.vincular("ABC", "1")).thenReturn(VINCULADO);
         doThrow(new EnvioTelegramException("403")).when(bot).enviar(anyString(), anyString());
         when(bot.obtenerActualizaciones(11)).thenReturn(actualizaciones("[]"));
 

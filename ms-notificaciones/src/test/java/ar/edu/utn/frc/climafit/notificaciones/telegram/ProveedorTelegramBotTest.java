@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,6 +29,7 @@ class ProveedorTelegramBotTest {
     private String url;
     private final AtomicReference<String> rutaRecibida = new AtomicReference<>();
     private final AtomicReference<String> cuerpoRecibido = new AtomicReference<>();
+    private final AtomicInteger pedidos = new AtomicInteger();
     private volatile int status = 200;
     private volatile String respuesta = "{\"ok\":true,\"result\":{\"message_id\":42}}";
 
@@ -35,6 +37,7 @@ class ProveedorTelegramBotTest {
     void levantar() throws IOException {
         servidor = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
         servidor.createContext("/", intercambio -> {
+            pedidos.incrementAndGet();
             rutaRecibida.set(intercambio.getRequestURI().getPath());
             cuerpoRecibido.set(new String(intercambio.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
             byte[] bytes = respuesta.getBytes(StandardCharsets.UTF_8);
@@ -66,15 +69,73 @@ class ProveedorTelegramBotTest {
     }
 
     @Test
-    void unRechazoDeTelegramDaUnErrorConSuDescripcion() {
+    void siElUsuarioBloqueoAlBotElChatEsInaccesible() {
         status = 403;
         respuesta = "{\"ok\":false,\"error_code\":403,\"description\":\"Forbidden: bot was blocked by the user\"}";
 
         assertThatThrownBy(() -> proveedor(url).enviar("987654321", "hola"))
-                .isInstanceOf(EnvioTelegramException.class)
+                .isInstanceOf(ChatInaccesibleException.class)
                 .hasMessageContaining("403")
                 .hasMessageContaining("bot was blocked by the user")
                 .hasMessageNotContaining(TOKEN);
+    }
+
+    @Test
+    void unChatQueNoExisteEsInaccesible() {
+        status = 400;
+        respuesta = "{\"ok\":false,\"error_code\":400,\"description\":\"Bad Request: chat not found\"}";
+
+        assertThatThrownBy(() -> proveedor(url).enviar("1", "hola"))
+                .isInstanceOf(ChatInaccesibleException.class)
+                .hasMessageContaining("chat not found");
+    }
+
+    @Test
+    void otrosErroresSeReintentanYNoDesvinculan() {
+        status = 429;
+        respuesta = "{\"ok\":false,\"error_code\":429,\"description\":\"Too Many Requests: retry after 5\"}";
+
+        assertThatThrownBy(() -> proveedor(url).enviar("1", "hola"))
+                .isInstanceOf(EnvioTelegramException.class)
+                .isNotInstanceOf(ChatInaccesibleException.class)
+                .hasMessageContaining("429");
+    }
+
+    // ---------- getMe: el usuario del bot sale del token, no de la configuración ----------
+
+    @Test
+    void elUsuarioDelBotSeLePreguntaATelegramUnaSolaVez() {
+        respuesta = "{\"ok\":true,\"result\":{\"id\":1,\"is_bot\":true,\"username\":\"MiBotDePrueba\"}}";
+        ProveedorTelegramBot bot = proveedor(url);
+
+        bot.comprobarBot();
+
+        assertThat(rutaRecibida.get()).isEqualTo("/bot" + TOKEN + "/getMe");
+        assertThat(bot.usuarioBot()).contains("MiBotDePrueba");
+        assertThat(bot.usuarioBot()).contains("MiBotDePrueba");
+        assertThat(pedidos.get()).as("queda guardado después del primer getMe").isEqualTo(1);
+    }
+
+    @Test
+    void unTokenInvalidoFrenaElArranqueSinMostrarElToken() {
+        status = 401;
+        respuesta = "{\"ok\":false,\"error_code\":401,\"description\":\"Unauthorized\"}";
+
+        assertThatThrownBy(() -> proveedor(url).comprobarBot())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("TELEGRAM_BOT_TOKEN no es válido")
+                .hasMessageContaining("401")
+                .hasMessageNotContaining(TOKEN);
+    }
+
+    @Test
+    void siTelegramNoRespondeAlArrancarArrancaIgualYReintentaDespues() {
+        ProveedorTelegramBot bot = proveedor(url);
+        servidor.stop(0);
+
+        bot.comprobarBot(); // no lanza
+
+        assertThat(bot.usuarioBot()).isEmpty();
     }
 
     @Test

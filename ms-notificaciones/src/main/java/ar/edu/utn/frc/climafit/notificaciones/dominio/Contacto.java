@@ -66,7 +66,25 @@ public class Contacto {
         this.actualizado = LocalDateTime.now();
     }
 
-    /** Deja listo un código nuevo para el link de vinculación. */
+    /**
+     * Telegram ya no deja escribirle a ese chat (el usuario bloqueó al bot o lo borró). Se olvida el
+     * chat, pero solo si sigue siendo el mismo: si mientras tanto vinculó otro, ese se conserva.
+     *
+     * @return true si se desvinculó
+     */
+    public boolean desvincularChat(String chatInaccesible) {
+        if (telegramChatId == null || !telegramChatId.equals(chatInaccesible)) {
+            return false;
+        }
+        this.telegramChatId = null;
+        this.actualizado = LocalDateTime.now();
+        return true;
+    }
+
+    /**
+     * Deja listo un código nuevo para el link de vinculación. Si ya tenía un chat, lo conserva hasta
+     * que llegue el /start del nuevo: así no se pierde ningún aviso durante el cambio de cuenta.
+     */
     public void prepararVinculacion(String codigo, LocalDateTime vence) {
         this.codigoVinculacion = codigo;
         this.codigoVence = vence;
@@ -77,7 +95,7 @@ public class Contacto {
         return telegramChatId != null && !telegramChatId.isBlank();
     }
 
-    /** El link se muestra solo si aceptó, todavía no vinculó su chat y el código no venció. */
+    /** Hay un link de vinculación pendiente (primera vez o cambio de cuenta) y no venció. */
     public boolean tieneCodigoVigente(LocalDateTime ahora) {
         return codigoVinculacion != null && codigoVence != null && codigoVence.isAfter(ahora);
     }

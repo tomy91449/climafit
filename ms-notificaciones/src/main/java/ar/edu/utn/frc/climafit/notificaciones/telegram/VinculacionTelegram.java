@@ -2,6 +2,7 @@ package ar.edu.utn.frc.climafit.notificaciones.telegram;
 
 import ar.edu.utn.frc.climafit.notificaciones.servicio.ContactoService;
 import ar.edu.utn.frc.climafit.notificaciones.servicio.ContactoService.ResultadoVinculacion;
+import ar.edu.utn.frc.climafit.notificaciones.servicio.ContactoService.Vinculacion;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,8 @@ public class VinculacionTelegram {
             + "Generá uno nuevo desde ClimaFit, en tus preferencias de contacto.";
     static final String MENSAJE_SIN_CODIGO = "Hola, soy el bot de avisos de ClimaFit. "
             + "Para recibir avisos, aceptalos desde ClimaFit y abrí el link que te damos ahí.";
+    static final String MENSAJE_CUENTA_CAMBIADA = "Tu cuenta de ClimaFit se vinculó a otro Telegram. "
+            + "Desde ahora los avisos llegan allá y no a este chat.";
 
     private final ProveedorTelegramBot bot;
     private final ContactoService contactos;
@@ -85,15 +88,20 @@ public class VinculacionTelegram {
         String chatId = mensaje.path("chat").path("id").asText();
         String codigo = texto.substring("/start".length()).trim();
 
-        String respuesta;
         if (codigo.isEmpty()) {
-            respuesta = MENSAJE_SIN_CODIGO;
-        } else if (contactos.vincular(codigo, chatId) == ResultadoVinculacion.VINCULADO) {
-            respuesta = MENSAJE_VINCULADO;
-        } else {
-            respuesta = MENSAJE_CODIGO_INVALIDO;
+            responder(chatId, MENSAJE_SIN_CODIGO);
+            return;
         }
-        responder(chatId, respuesta);
+        Vinculacion vinculacion = contactos.vincular(codigo, chatId);
+        if (vinculacion.resultado() != ResultadoVinculacion.VINCULADO) {
+            responder(chatId, MENSAJE_CODIGO_INVALIDO);
+            return;
+        }
+        responder(chatId, MENSAJE_VINCULADO);
+        if (vinculacion.cambioDeCuenta(chatId)) {
+            // Cambio de cuenta: el chat viejo deja de recibir avisos, así que se le cuenta por qué.
+            responder(vinculacion.chatAnterior(), MENSAJE_CUENTA_CAMBIADA);
+        }
     }
 
     /** La respuesta es solo informativa: si falla, la vinculación igual quedó hecha. */

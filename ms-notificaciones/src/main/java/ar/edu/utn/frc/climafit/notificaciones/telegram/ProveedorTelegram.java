@@ -1,5 +1,7 @@
 package ar.edu.utn.frc.climafit.notificaciones.telegram;
 
+import java.util.Optional;
+
 /**
  * Canal de envío de los avisos. Hay dos implementaciones y se elige con la propiedad
  * {@code climafit.telegram.proveedor} (variable de entorno TELEGRAM_PROVEEDOR):
@@ -17,7 +19,17 @@ public interface ProveedorTelegram {
      * @param chatId chat de Telegram del destinatario (número; existe recién cuando el usuario le
      *               mandó /start al bot)
      * @return identificador del mensaje en el proveedor
-     * @throws EnvioTelegramException si el proveedor rechazó el mensaje o no respondió
+     * @throws ChatInaccesibleException si el usuario bloqueó al bot o el chat ya no existe
+     * @throws EnvioTelegramException   si el proveedor rechazó el mensaje o no respondió
      */
     String enviar(String chatId, String mensaje);
+
+    /**
+     * Usuario del bot (sin @), para armar el link de vinculación {@code t.me/<usuario>?start=<código>}.
+     * Vacío si no hay un bot real (proveedor "log") o si Telegram no respondió: en ese caso no se
+     * ofrece link y el chat se puede cargar a mano.
+     */
+    default Optional<String> usuarioBot() {
+        return Optional.empty();
+    }
 }

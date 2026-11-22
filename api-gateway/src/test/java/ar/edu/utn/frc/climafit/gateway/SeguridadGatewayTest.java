@@ -125,6 +125,14 @@ class SeguridadGatewayTest {
     }
 
     @Test
+    void pedirUnLinkDeTelegramSinTokenResponde401() {
+        cliente.post().uri("/api/contactos/mio/vinculacion").exchange()
+                .expectStatus().isUnauthorized()
+                .expectBody().jsonPath("$.codigo").isEqualTo("NO_AUTENTICADO");
+        assertThat(rutaRecibida.get()).as("no debe llegar al microservicio").isNull();
+    }
+
+    @Test
     void conTokenInvalidoResponde401() {
         cliente.get().uri("/api/actividades").headers(h -> h.setBearerAuth("token-falsificado")).exchange()
                 .expectStatus().isUnauthorized()
@@ -205,6 +213,8 @@ class SeguridadGatewayTest {
             "profesor,  GET,    /api/clima/pronostico,            503",
             // ms-notificaciones
             "alumno,    PUT,    /api/contactos/mio,               200",
+            "alumno,    POST,   /api/contactos/mio/vinculacion,   200",
+            "profesor,  POST,   /api/contactos/mio/vinculacion,   200",
             "alumno,    GET,    /api/notificaciones?claseId=1,    403",
             "profesor,  GET,    /api/notificaciones?claseId=1,    200",
     })

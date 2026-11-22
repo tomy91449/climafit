@@ -1080,6 +1080,41 @@
               }
             }
           ]
+        },
+        {
+          "name": "Pedir link para vincular o cambiar de cuenta (proveedor log) -> 503",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/contactos/mio/vinculacion",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Con TELEGRAM_PROVEEDOR=bot devuelve 200 con un linkVinculacion nuevo aunque ya esté vinculado (cambio de cuenta). En la demo (proveedor log) no hay bot real: 503 SERVICIO_NO_DISPONIBLE y el chat se carga a mano."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 503 sin bot real (200 con TELEGRAM_PROVEEDOR=bot)\", () => pm.expect(pm.response.code).to.be.oneOf([200, 503]));",
+                  "if (pm.response.code === 200) {",
+                  "    pm.test(\"Trae un link nuevo\", () => pm.expect(pm.response.json().linkVinculacion).to.include(\"https://t.me/\"));",
+                  "} else {",
+                  "    pm.test(\"Código SERVICIO_NO_DISPONIBLE\", () => pm.expect(pm.response.json().codigo).to.eql(\"SERVICIO_NO_DISPONIBLE\"));",
+                  "}"
+                ]
+              }
+            }
+          ]
         }
       ]
     },

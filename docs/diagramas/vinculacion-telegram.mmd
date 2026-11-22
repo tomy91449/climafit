@@ -14,6 +14,7 @@ sequenceDiagram
     Note over U,DB: 1. Pedir el link (F10, RN14)
     U->>GW: PUT /api/contactos/mio {"aceptaTelegram": true} + JWT
     GW->>N: PUT /contactos/mio (valida JWT y rol)
+    N->>T: getMe (una vez): usuario del bot dueño del token
     N->>DB: guarda el consentimiento y un código aleatorio<br/>(un solo uso, vence en 24 h)
     N-->>U: 200 {vinculado: false, linkVinculacion: t.me/#lt;bot#gt;?start=#lt;código#gt;}
   end
@@ -29,6 +30,9 @@ sequenceDiagram
     alt código válido
       N->>DB: guarda el chat_id en el contacto y borra el código
       N->>T: sendMessage "¡Listo! Tu Telegram quedó vinculado"
+      opt era un cambio de cuenta
+        N->>T: sendMessage al chat anterior: "los avisos pasan a otro Telegram"
+      end
     else vencido, ya usado o inexistente
       N->>T: sendMessage "Este link no es válido o ya venció"
     end
@@ -42,4 +46,14 @@ sequenceDiagram
     N->>T: sendMessage(chat_id, aviso) con reintentos
     T-->>U: aviso en Telegram
     N->>DB: notificación ENVIADA, OMITIDA o FALLIDA
+  end
+
+  rect rgb(252, 228, 236)
+    Note over U,T: 4. Cambiar de cuenta o bot bloqueado
+    U->>GW: POST /api/contactos/mio/vinculacion + JWT
+    GW->>N: POST /contactos/mio/vinculacion
+    N-->>U: 200 link nuevo (el chat actual sigue recibiendo avisos<br/>hasta el /start del nuevo, que repite el paso 2)
+    N->>T: sendMessage(chat_id, aviso)
+    T-->>N: 403 bot was blocked by the user
+    N->>DB: notificación FALLIDA sin reintentar y se desvincula el chat<br/>(al volver a aceptar, recibe un link nuevo)
   end

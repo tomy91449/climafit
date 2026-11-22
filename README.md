@@ -87,7 +87,9 @@ Antes los avisos iban por WhatsApp. Se cambió a Telegram porque el proveedor de
 El usuario no tiene que averiguar su `chat_id`:
 
 1. Acepta los avisos con `PUT /api/contactos/mio` y `{"aceptaTelegram": true}`.
-2. La respuesta trae `linkVinculacion`, por ejemplo `https://t.me/ClimaFitBot?start=Xy7...`, con `vinculado: false`.
+2. La respuesta trae `linkVinculacion`, por ejemplo `https://t.me/<bot>?start=Xy7...`, con `vinculado: false`.
+   El nombre del bot no se configura: ms-notificaciones se lo pregunta a Telegram (`getMe`) con el token,
+   así el link siempre lleva al bot dueño de ese token.
 3. El usuario abre el link y toca **Iniciar**. El bot recibe `/start <código>`, guarda el chat y le contesta "¡Listo! Tu Telegram quedó vinculado a ClimaFit".
 4. Desde ahí `GET /api/contactos/mio` muestra `vinculado: true` y el `telegramChatId`.
 
@@ -97,6 +99,19 @@ Detalles:
 - Los mensajes del bot se leen con `getUpdates` cada 3 segundos: no hace falta una URL pública ni webhook. Solo funciona con `TELEGRAM_PROVEEDOR=bot`.
 - Mientras el usuario no toca Iniciar, sus notificaciones quedan `OMITIDA` con el motivo "no tiene su chat de Telegram registrado" (RN14).
 - Para pruebas se puede seguir cargando el chat a mano: `{"telegramChatId": "123456789", "aceptaTelegram": true}`.
+  Con `TELEGRAM_PROVEEDOR=log` no hay bot real, así que no se genera link: el chat se carga siempre así.
+
+### Cambiar de cuenta o bot bloqueado
+
+- **Cambiar de cuenta de Telegram:** `POST /api/contactos/mio/vinculacion` (sin cuerpo) devuelve un
+  `linkVinculacion` nuevo aunque ya esté vinculado. El chat actual sigue recibiendo los avisos hasta que se toca
+  **Iniciar** desde el link nuevo; en ese momento el bot le avisa al chat viejo que los avisos pasan al otro.
+  Responde 404 si el usuario nunca guardó sus preferencias, 409 `AVISOS_NO_ACEPTADOS` si no aceptó los avisos
+  y 503 si el bot no está disponible (o el proveedor es `log`).
+- **El usuario bloqueó al bot o borró el chat:** Telegram responde 403 (o 400 "chat not found"). Reintentar no
+  sirve, así que la notificación queda `FALLIDA` en el primer intento y el chat se desvincula del contacto
+  (`vinculado: false`). Los avisos siguientes quedan `OMITIDA` y, con `PUT /api/contactos/mio`, el usuario
+  recibe un link nuevo.
 
 ### Pasos para el envío real
 
@@ -105,15 +120,16 @@ Detalles:
    ```env
    TELEGRAM_PROVEEDOR=bot
    TELEGRAM_BOT_TOKEN=123456789:AA...
-   TELEGRAM_BOT_USUARIO=ClimaFitBot
    ```
-   El token es un secreto: va solo en el `.env`, nunca en el código ni en el repo.
+   El token es un secreto: va solo en el `.env`, nunca en el código ni en el repo. Al arrancar,
+   ms-notificaciones lo comprueba con `getMe`: si es inválido, no arranca y el log lo dice; si Telegram no
+   responde, arranca igual y vuelve a preguntar al armar el primer link.
 3. Recrear el servicio para que tome las variables (con `restart` no alcanza):
    `docker compose up -d --force-recreate ms-notificaciones`
 4. Con el token de un alumno, hacer `PUT /api/contactos/mio` con `{"aceptaTelegram": true}`, abrir el `linkVinculacion` desde el celular y tocar **Iniciar**.
 5. Inscribir al alumno a una clase y cancelarla o reprogramarla como profesor. Para seguir el envío: `docker compose logs -f ms-notificaciones`. Si salió bien aparece `Telegram enviado al chat ... (message_id ...)`.
 
-Si el usuario nunca le escribió al bot o lo bloqueó, Telegram responde 403. La notificación se reintenta 3 veces y queda `FALLIDA` con el motivo en `ultimo_error`, sin el token.
+Al arrancar, el log muestra `Bot de Telegram listo: @<usuario del bot>`. Si un envío falla, el motivo queda en `ultimo_error`, sin el token.
 
 ## Convenciones
 

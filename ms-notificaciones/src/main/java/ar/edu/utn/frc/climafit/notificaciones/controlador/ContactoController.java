@@ -7,6 +7,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,5 +41,15 @@ public class ContactoController {
     @Operation(summary = "Consultar las preferencias de contacto propias")
     public ContactoResponse obtener() {
         return servicio.obtenerMio();
+    }
+
+    @PostMapping("/mio/vinculacion")
+    @Operation(summary = "Pedir un link nuevo para vincular o cambiar la cuenta de Telegram",
+            description = "Sirve aunque ya tenga un chat vinculado (por ejemplo, para pasar a otra cuenta). "
+                    + "El chat actual se sigue usando hasta que se toca Iniciar desde el link nuevo. "
+                    + "404 si nunca guardó sus preferencias, 409 si no aceptó los avisos y 503 si el bot "
+                    + "de Telegram no está disponible (o el proveedor es \"log\").")
+    public ContactoResponse nuevaVinculacion() {
+        return servicio.nuevaVinculacion();
     }
 }

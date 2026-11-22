@@ -4,6 +4,7 @@ import ar.edu.utn.frc.climafit.notificaciones.dominio.Contacto;
 import ar.edu.utn.frc.climafit.notificaciones.dominio.Notificacion;
 import ar.edu.utn.frc.climafit.notificaciones.repositorio.ContactoRepository;
 import ar.edu.utn.frc.climafit.notificaciones.repositorio.NotificacionRepository;
+import ar.edu.utn.frc.climafit.notificaciones.telegram.ChatInaccesibleException;
 import ar.edu.utn.frc.climafit.notificaciones.telegram.ProveedorTelegram;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -89,8 +90,25 @@ public class EnvioNotificaciones {
     }
 
     /**
+     * El usuario bloqueó al bot o borró el chat: reintentar no sirve. La notificación queda FALLIDA
+     * y el chat se desvincula, así los próximos avisos quedan OMITIDA (en lugar de fallar uno por
+     * uno) y, cuando el usuario vuelva a aceptar avisos, recibe un link nuevo.
+     */
+    private void chatInaccesible(Notificacion notificacion, String chatId, ChatInaccesibleException ex) {
+        notificacion.marcarFallida(ex.getMessage());
+        notificaciones.save(notificacion);
+        contactos.findById(notificacion.getUsuarioId()).ifPresent(contacto -> {
+            if (contacto.desvincularChat(chatId)) {
+                contactos.save(contacto);
+                log.warn("Chat de Telegram desvinculado del usuario {}: {}", contacto.getUsuarioId(), ex.getMessage());
+            }
+        });
+        log.error("Notificación {} FALLIDA: el chat ya no acepta mensajes del bot", notificacion.getId());
+    }
+
+    /**
      * RN16: hasta {@code maxIntentos} intentos con espera creciente (1 s, 2 s, 4 s...). Si todos
-     * fallan la notificación queda FALLIDA. La clase NO se toca: el cambio ya ocurrió y es válido
+     * fallan, o si el chat ya no acepta mensajes del bot, la notificación queda FALLIDA. La clase NO se toca: el cambio ya ocurrió y es válido
      * aunque el aviso no haya llegado.
      */
     private void enviarConReintentos(Notificacion notificacion, String chatId) {
@@ -104,6 +122,9 @@ public class EnvioNotificaciones {
                 notificacion.marcarEnviada(idProveedor);
                 notificaciones.save(notificacion);
                 log.info("Notificación {} ENVIADA en el intento {}", notificacion.getId(), notificacion.getIntentos());
+                return;
+            } catch (ChatInaccesibleException ex) {
+                chatInaccesible(notificacion, chatId, ex);
                 return;
             } catch (RuntimeException ex) {
                 log.warn("Intento {}/{} de la notificación {} falló: {}", notificacion.getIntentos(), maxIntentos,

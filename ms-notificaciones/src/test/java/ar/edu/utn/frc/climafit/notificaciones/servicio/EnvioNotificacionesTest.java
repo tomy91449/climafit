@@ -7,11 +7,13 @@ import ar.edu.utn.frc.climafit.notificaciones.dominio.Notificacion;
 import ar.edu.utn.frc.climafit.notificaciones.dominio.TipoEvento;
 import ar.edu.utn.frc.climafit.notificaciones.repositorio.ContactoRepository;
 import ar.edu.utn.frc.climafit.notificaciones.repositorio.NotificacionRepository;
+import ar.edu.utn.frc.climafit.notificaciones.telegram.ChatInaccesibleException;
 import ar.edu.utn.frc.climafit.notificaciones.telegram.EnvioTelegramException;
 import ar.edu.utn.frc.climafit.notificaciones.telegram.ProveedorTelegram;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -119,6 +121,25 @@ class EnvioNotificacionesTest {
         assertThat(notificacion.getIntentos()).isEqualTo(3);
         assertThat(notificacion.getUltimoError()).contains("503");
         verify(proveedor, times(3)).enviar(anyString(), anyString());
+    }
+
+    @Test
+    void siElUsuarioBloqueoAlBotFallaSinReintentarYSeDesvinculaElChat() {
+        conContacto(CHAT, true);
+        when(proveedor.enviar(anyString(), anyString()))
+                .thenThrow(new ChatInaccesibleException("Telegram respondió 403: Forbidden: bot was blocked by the user"));
+
+        envio.procesar(10L);
+
+        assertThat(notificacion.getEstado()).isEqualTo(EstadoNotificacion.FALLIDA);
+        assertThat(notificacion.getIntentos()).isEqualTo(1);
+        assertThat(notificacion.getUltimoError()).contains("blocked");
+        verify(proveedor, times(1)).enviar(anyString(), anyString());
+
+        ArgumentCaptor<Contacto> guardado = ArgumentCaptor.forClass(Contacto.class);
+        verify(contactos).save(guardado.capture());
+        assertThat(guardado.getValue().tieneChat()).isFalse();
+        assertThat(guardado.getValue().isAceptaTelegram()).as("el consentimiento no cambia").isTrue();
     }
 
     @Test
