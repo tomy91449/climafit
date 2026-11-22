@@ -15,7 +15,7 @@ spring:
     locale: es_AR
     locale-resolver: fixed
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/actividades_db}
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/actividades_db}
     username: ${DB_USER:actividades}
     password: ${DB_PASSWORD:actividades}
   jpa:

@@ -3,7 +3,8 @@
 #   docker compose up -d --build
 #
 # Solo se publican al host el API Gateway (8080) y Keycloak (8090).
-# Los microservicios y PostgreSQL quedan en la red interna "climafit" (trusted zone).
+# Los microservicios y las dos instancias de PostgreSQL quedan en la red interna "climafit" (trusted zone):
+# las bases NO tienen puerto publicado. Para programar desde el IDE ver docker-compose.dev.yml.
 
 name: climafit
 
@@ -32,15 +33,32 @@ services:
     environment:
       TZ: ${TZ}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      ACTIVIDADES_DB_PASSWORD: ${ACTIVIDADES_DB_PASSWORD}
       CLASES_DB_PASSWORD: ${CLASES_DB_PASSWORD}
       NOTIFICACIONES_DB_PASSWORD: ${NOTIFICACIONES_DB_PASSWORD}
       KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./infra/postgres/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
-    # Publicado solo para desarrollo local (servicios corriendo desde el IDE).
-    ports: ["5432:5432"]
+    networks: [climafit]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # Base propia de ms-actividades, en un contenedor aparte del resto.
+  # Mismo esquema de seguridad que "postgres": el superusuario es postgres y init.sh crea el
+  # usuario "actividades", dueño solo de actividades_db (no superusuario).
+  postgres-actividades:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      ACTIVIDADES_DB_PASSWORD: ${ACTIVIDADES_DB_PASSWORD}
+    volumes:
+      - postgres-actividades-data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
     networks: [climafit]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -86,11 +104,11 @@ services:
     build: { context: ., dockerfile: ms-actividades/Dockerfile }
     environment:
       <<: *env-spring
-      DB_URL: jdbc:postgresql://postgres:5432/actividades_db
+      DB_URL: jdbc:postgresql://postgres-actividades:5432/actividades_db
       DB_USER: actividades
       DB_PASSWORD: ${ACTIVIDADES_DB_PASSWORD}
     depends_on:
-      postgres: { condition: service_healthy }
+      postgres-actividades: { condition: service_healthy }
       keycloak: { condition: service_healthy }
 
   ms-clases:
@@ -120,10 +138,8 @@ services:
       DB_URL: jdbc:postgresql://postgres:5432/notificaciones_db
       DB_USER: notificaciones
       DB_PASSWORD: ${NOTIFICACIONES_DB_PASSWORD}
-      WHATSAPP_PROVEEDOR: ${WHATSAPP_PROVEEDOR}
-      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID}
-      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN}
-      TWILIO_FROM: ${TWILIO_FROM}
+      TELEGRAM_PROVEEDOR: ${TELEGRAM_PROVEEDOR:-log}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
     depends_on:
       postgres: { condition: service_healthy }
       keycloak: { condition: service_healthy }
@@ -150,3 +166,4 @@ networks:
 
 volumes:
   postgres-data:
+  postgres-actividades-data:

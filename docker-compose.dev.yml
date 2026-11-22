@@ -1,0 +1,11 @@
+# SOLO para programar desde el IDE (microservicio corriendo en IntelliJ contra las bases de Docker).
+# En el despliegue normal (docker compose up) las bases NO tienen puerto publicado.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres postgres-actividades keycloak
+#
+# Los puertos se publican solo en 127.0.0.1: se llega desde esta máquina, no desde la red.
+services:
+  postgres:
+    ports: ["127.0.0.1:5432:5432"]
+  postgres-actividades:
+    ports: ["127.0.0.1:5433:5432"]
