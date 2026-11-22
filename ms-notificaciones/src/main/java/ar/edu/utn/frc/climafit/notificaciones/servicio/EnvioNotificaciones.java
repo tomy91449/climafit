@@ -4,7 +4,7 @@ import ar.edu.utn.frc.climafit.notificaciones.dominio.Contacto;
 import ar.edu.utn.frc.climafit.notificaciones.dominio.Notificacion;
 import ar.edu.utn.frc.climafit.notificaciones.repositorio.ContactoRepository;
 import ar.edu.utn.frc.climafit.notificaciones.repositorio.NotificacionRepository;
-import ar.edu.utn.frc.climafit.notificaciones.whatsapp.ProveedorWhatsapp;
+import ar.edu.utn.frc.climafit.notificaciones.telegram.ProveedorTelegram;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,7 +17,7 @@ import java.time.Duration;
 import java.util.Optional;
 
 /**
- * Envío de las notificaciones por WhatsApp, en segundo plano (F14, RN14, RN16).
+ * Envío de las notificaciones por Telegram, en segundo plano (F14, RN14, RN16).
  * <p>
  * Está en una clase aparte de {@link NotificacionService} porque {@code @Async} funciona a través
  * del proxy de Spring: si un método del mismo bean se llamara a sí mismo, se ejecutaría en el
@@ -34,14 +34,14 @@ public class EnvioNotificaciones {
 
     private final NotificacionRepository notificaciones;
     private final ContactoRepository contactos;
-    private final ProveedorWhatsapp proveedor;
+    private final ProveedorTelegram proveedor;
     private final int maxIntentos;
     private final Duration esperaInicial;
 
     public EnvioNotificaciones(NotificacionRepository notificaciones, ContactoRepository contactos,
-                               ProveedorWhatsapp proveedor,
-                               @Value("${climafit.whatsapp.max-intentos:3}") int maxIntentos,
-                               @Value("${climafit.whatsapp.espera-inicial:PT1S}") Duration esperaInicial) {
+                               ProveedorTelegram proveedor,
+                               @Value("${climafit.telegram.max-intentos:3}") int maxIntentos,
+                               @Value("${climafit.telegram.espera-inicial:PT1S}") Duration esperaInicial) {
         this.notificaciones = notificaciones;
         this.contactos = contactos;
         this.proveedor = proveedor;
@@ -75,17 +75,17 @@ public class EnvioNotificaciones {
 
         // RN14: el consentimiento se mira al momento de enviar, con el contacto vigente.
         Optional<Contacto> contacto = contactos.findById(notificacion.getUsuarioId());
-        if (contacto.isEmpty() || !contacto.get().puedeRecibirWhatsapp()) {
+        if (contacto.isEmpty() || !contacto.get().puedeRecibirTelegram()) {
             String motivo = contacto.isEmpty() ? "El destinatario no registró sus preferencias de contacto"
-                    : !contacto.get().isAceptaWhatsapp() ? "El destinatario no aceptó avisos por WhatsApp"
-                    : "El destinatario no tiene teléfono registrado";
+                    : !contacto.get().isAceptaTelegram() ? "El destinatario no aceptó avisos por Telegram"
+                    : "El destinatario no tiene su chat de Telegram registrado";
             notificacion.omitir(motivo);
             notificaciones.save(notificacion);
             log.info("Notificación {} OMITIDA: {}", notificacionId, motivo);
             return;
         }
 
-        enviarConReintentos(notificacion, contacto.get().getTelefono());
+        enviarConReintentos(notificacion, contacto.get().getTelegramChatId());
     }
 
     /**
@@ -93,14 +93,14 @@ public class EnvioNotificaciones {
      * fallan la notificación queda FALLIDA. La clase NO se toca: el cambio ya ocurrió y es válido
      * aunque el aviso no haya llegado.
      */
-    private void enviarConReintentos(Notificacion notificacion, String telefono) {
+    private void enviarConReintentos(Notificacion notificacion, String chatId) {
         String mensaje = notificacion.getEvento().getMensaje();
         Duration espera = esperaInicial;
 
         while (true) {
-            notificacion.registrarIntento(telefono);
+            notificacion.registrarIntento(chatId);
             try {
-                String idProveedor = proveedor.enviar(telefono, mensaje);
+                String idProveedor = proveedor.enviar(chatId, mensaje);
                 notificacion.marcarEnviada(idProveedor);
                 notificaciones.save(notificacion);
                 log.info("Notificación {} ENVIADA en el intento {}", notificacion.getId(), notificacion.getIntentos());

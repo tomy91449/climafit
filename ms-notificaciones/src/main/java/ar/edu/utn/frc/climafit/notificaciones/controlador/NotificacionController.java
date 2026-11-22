@@ -21,7 +21,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/notificaciones")
 @Validated
-@Tag(name = "Notificaciones", description = "Estado de los avisos por WhatsApp de cada clase (F14)")
+@Tag(name = "Notificaciones", description = "Estado de los avisos por Telegram de cada clase (F14)")
 public class NotificacionController {
 
     private final NotificacionService servicio;

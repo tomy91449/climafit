@@ -29,8 +29,9 @@ public class ContactoService {
     public ContactoResponse guardarMio(ContactoRequest request) {
         String usuarioId = usuarioActual.id();
         Contacto contacto = repositorio.findById(usuarioId).orElseGet(() -> new Contacto(usuarioId));
-        String telefono = request.telefono() == null || request.telefono().isBlank() ? null : request.telefono();
-        contacto.actualizar(telefono, request.aceptaWhatsapp());
+        String chatId = request.telegramChatId() == null || request.telegramChatId().isBlank()
+                ? null : request.telegramChatId();
+        contacto.actualizar(chatId, request.aceptaTelegram());
         return ContactoResponse.de(repositorio.save(contacto));
     }
 

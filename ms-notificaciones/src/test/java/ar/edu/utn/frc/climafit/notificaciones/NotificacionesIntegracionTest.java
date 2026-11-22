@@ -78,11 +78,11 @@ class NotificacionesIntegracionTest {
     void rn14SeEnviaAlQueAceptoYSeOmiteAlQueNo() throws Exception {
         mvc.perform(put("/contactos/mio").with(usuario("alu-acepta", "ALUMNO"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"telefono\": \"+5493511234567\", \"aceptaWhatsapp\": true}"))
+                        .content("{\"telegramChatId\": \"100000001\", \"aceptaTelegram\": true}"))
                 .andExpect(status().isOk());
         mvc.perform(put("/contactos/mio").with(usuario("alu-rechaza", "ALUMNO"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"telefono\": \"+5493510000002\", \"aceptaWhatsapp\": false}"))
+                        .content("{\"telegramChatId\": \"100000002\", \"aceptaTelegram\": false}"))
                 .andExpect(status().isOk());
 
         mvc.perform(post("/internal/notificaciones").with(SERVICIO).contentType(MediaType.APPLICATION_JSON)
@@ -135,19 +135,19 @@ class NotificacionesIntegracionTest {
     }
 
     @Test
-    void telefonoInvalidoDevuelve400() throws Exception {
+    void chatIdInvalidoDevuelve400() throws Exception {
         mvc.perform(put("/contactos/mio").with(usuario("alu-x", "ALUMNO"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"telefono\": \"123\", \"aceptaWhatsapp\": true}"))
+                        .content("{\"telegramChatId\": \"+5493511234567\", \"aceptaTelegram\": true}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"));
     }
 
     @Test
-    void aceptarSinTelefonoDevuelve400() throws Exception {
+    void aceptarSinChatIdDevuelve400() throws Exception {
         mvc.perform(put("/contactos/mio").with(usuario("alu-y", "ALUMNO"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"aceptaWhatsapp\": true}"))
+                        .content("{\"aceptaTelegram\": true}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"));
     }
@@ -160,13 +160,13 @@ class NotificacionesIntegracionTest {
 
         mvc.perform(put("/contactos/mio").with(usuario("alu-nuevo", "ALUMNO"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"telefono\": \"+5493517654321\", \"aceptaWhatsapp\": true}"))
+                        .content("{\"telegramChatId\": \"987654321\", \"aceptaTelegram\": true}"))
                 .andExpect(status().isOk());
 
         mvc.perform(get("/contactos/mio").with(usuario("alu-nuevo", "ALUMNO")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.telefono").value("+5493517654321"))
-                .andExpect(jsonPath("$.aceptaWhatsapp").value(true));
+                .andExpect(jsonPath("$.telegramChatId").value("987654321"))
+                .andExpect(jsonPath("$.aceptaTelegram").value(true));
     }
 
     @Test

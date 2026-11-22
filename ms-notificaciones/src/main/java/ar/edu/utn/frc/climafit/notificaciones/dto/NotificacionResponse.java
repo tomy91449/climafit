@@ -13,7 +13,7 @@ public record NotificacionResponse(
         TipoEvento tipo,
         Long claseId,
         String usuarioId,
-        String telefono,
+        String telegramChatId,
         String mensaje,
         EstadoNotificacion estado,
         int intentos,
@@ -25,7 +25,7 @@ public record NotificacionResponse(
     public static NotificacionResponse de(Notificacion n) {
         var e = n.getEvento();
         return new NotificacionResponse(n.getId(), e.getEventoId(), e.getTipo(), e.getClaseId(), n.getUsuarioId(),
-                n.getTelefono(), e.getMensaje(), n.getEstado(), n.getIntentos(), n.getUltimoError(),
+                n.getTelegramChatId(), e.getMensaje(), n.getEstado(), n.getIntentos(), n.getUltimoError(),
                 n.getIdMensajeProveedor(), e.getFechaRecepcion(), n.getFechaEnvio());
     }
 }

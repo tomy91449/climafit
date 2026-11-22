@@ -7,8 +7,8 @@ import ar.edu.utn.frc.climafit.notificaciones.dominio.Notificacion;
 import ar.edu.utn.frc.climafit.notificaciones.dominio.TipoEvento;
 import ar.edu.utn.frc.climafit.notificaciones.repositorio.ContactoRepository;
 import ar.edu.utn.frc.climafit.notificaciones.repositorio.NotificacionRepository;
-import ar.edu.utn.frc.climafit.notificaciones.whatsapp.EnvioWhatsappException;
-import ar.edu.utn.frc.climafit.notificaciones.whatsapp.ProveedorWhatsapp;
+import ar.edu.utn.frc.climafit.notificaciones.telegram.EnvioTelegramException;
+import ar.edu.utn.frc.climafit.notificaciones.telegram.ProveedorTelegram;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,19 +25,19 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/** RN14 (consentimiento) y RN16 (reintentos) sin base de datos ni WhatsApp real. */
+/** RN14 (consentimiento) y RN16 (reintentos) sin base de datos ni Telegram real. */
 @ExtendWith(MockitoExtension.class)
 class EnvioNotificacionesTest {
 
     private static final String ALUMNO = "sub-alumno1";
-    private static final String TELEFONO = "+5493511234567";
+    private static final String CHAT = "123456789";
 
     @Mock
     private NotificacionRepository notificaciones;
     @Mock
     private ContactoRepository contactos;
     @Mock
-    private ProveedorWhatsapp proveedor;
+    private ProveedorTelegram proveedor;
 
     private EnvioNotificaciones envio;
     private Notificacion notificacion;
@@ -52,15 +52,15 @@ class EnvioNotificacionesTest {
         when(notificaciones.findConEvento(10L)).thenReturn(Optional.of(notificacion));
     }
 
-    private void conContacto(String telefono, boolean acepta) {
+    private void conContacto(String chatId, boolean acepta) {
         Contacto contacto = new Contacto(ALUMNO);
-        contacto.actualizar(telefono, acepta);
+        contacto.actualizar(chatId, acepta);
         when(contactos.findById(ALUMNO)).thenReturn(Optional.of(contacto));
     }
 
     @Test
-    void omiteSiElAlumnoNoAceptoWhatsapp() {
-        conContacto(TELEFONO, false);
+    void omiteSiElAlumnoNoAceptoTelegram() {
+        conContacto(CHAT, false);
 
         envio.procesar(10L);
 
@@ -81,24 +81,24 @@ class EnvioNotificacionesTest {
 
     @Test
     void enviaYGuardaElIdDelProveedor() {
-        conContacto(TELEFONO, true);
-        when(proveedor.enviar(TELEFONO, "Tu clase de Yoga se suspendió por lluvia")).thenReturn("SM123");
+        conContacto(CHAT, true);
+        when(proveedor.enviar(CHAT, "Tu clase de Yoga se suspendió por lluvia")).thenReturn("42");
 
         envio.procesar(10L);
 
         assertThat(notificacion.getEstado()).isEqualTo(EstadoNotificacion.ENVIADA);
-        assertThat(notificacion.getIdMensajeProveedor()).isEqualTo("SM123");
-        assertThat(notificacion.getTelefono()).isEqualTo(TELEFONO);
+        assertThat(notificacion.getIdMensajeProveedor()).isEqualTo("42");
+        assertThat(notificacion.getTelegramChatId()).isEqualTo(CHAT);
         assertThat(notificacion.getIntentos()).isEqualTo(1);
         assertThat(notificacion.getFechaEnvio()).isNotNull();
     }
 
     @Test
     void reintentaYSiElSegundoIntentoFuncionaQuedaEnviada() {
-        conContacto(TELEFONO, true);
+        conContacto(CHAT, true);
         when(proveedor.enviar(anyString(), anyString()))
-                .thenThrow(new EnvioWhatsappException("timeout"))
-                .thenReturn("SM456");
+                .thenThrow(new EnvioTelegramException("timeout"))
+                .thenReturn("43");
 
         envio.procesar(10L);
 
@@ -109,8 +109,8 @@ class EnvioNotificacionesTest {
 
     @Test
     void despuesDeTresFallasQuedaFallida() {
-        conContacto(TELEFONO, true);
-        when(proveedor.enviar(anyString(), anyString())).thenThrow(new EnvioWhatsappException("Twilio respondió 503"));
+        conContacto(CHAT, true);
+        when(proveedor.enviar(anyString(), anyString())).thenThrow(new EnvioTelegramException("Telegram respondió 503"));
 
         envio.procesar(10L);
 

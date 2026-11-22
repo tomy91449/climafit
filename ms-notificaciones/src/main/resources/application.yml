@@ -35,25 +35,23 @@ spring:
 
   task:
     execution:
-      # Pool de hilos de @Async: los envíos de WhatsApp corren acá, no en el hilo de la solicitud.
+      # Pool de hilos de @Async: los envíos por Telegram corren acá, no en el hilo de la solicitud.
       thread-name-prefix: envio-
       pool:
         core-size: 4
         max-size: 8
 
 climafit:
-  whatsapp:
-    # "log" (demo: solo escribe el mensaje en el log) o "twilio" (envío real por el sandbox).
-    proveedor: ${WHATSAPP_PROVEEDOR:log}
+  telegram:
+    # "log" (demo: solo escribe el mensaje en el log) o "bot" (envío real con la Bot API de Telegram).
+    proveedor: ${TELEGRAM_PROVEEDOR:log}
     # RN16: intentos totales por notificación y espera antes del 2.º intento (después se duplica: 1 s, 2 s...).
     max-intentos: 3
     espera-inicial: PT1S
-    twilio:
-      url: https://api.twilio.com
-      account-sid: ${TWILIO_ACCOUNT_SID:}
-      auth-token: ${TWILIO_AUTH_TOKEN:}
-      # Número del sandbox de Twilio, por ejemplo +14155238886
-      from: ${TWILIO_FROM:}
+    bot:
+      url: https://api.telegram.org
+      # Token que entrega @BotFather. Es un secreto: va solo en el .env, nunca en el código.
+      token: ${TELEGRAM_BOT_TOKEN:}
   notificaciones:
     # Cada cuánto se buscan notificaciones PENDIENTE colgadas, y qué antigüedad deben tener.
     recuperacion-cada: PT5M

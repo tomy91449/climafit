@@ -21,7 +21,7 @@ public class AsincroniaConfig {
     /**
      * El correlation id vive en el MDC, que es propio de cada hilo. Sin esto, los logs del envío
      * (que corre en otro hilo) saldrían sin id y no se podría seguir un aviso desde ms-clases hasta
-     * WhatsApp. Spring Boot aplica este decorador al pool de @Async automáticamente.
+     * Telegram. Spring Boot aplica este decorador al pool de @Async automáticamente.
      */
     @Bean
     public TaskDecorator copiarCorrelationId() {

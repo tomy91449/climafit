@@ -36,7 +36,9 @@ public class Notificacion {
     @Column(name = "usuario_id", nullable = false)
     private String usuarioId;
 
-    private String telefono;
+    /** Chat de Telegram al que se envió (foto del momento del envío). */
+    @Column(name = "telegram_chat_id")
+    private String telegramChatId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -67,15 +69,15 @@ public class Notificacion {
         return estado == EstadoNotificacion.PENDIENTE;
     }
 
-    /** RN14: sin consentimiento o sin teléfono no se intenta enviar. */
+    /** RN14: sin consentimiento o sin chat de Telegram no se intenta enviar. */
     public void omitir(String motivo) {
         this.estado = EstadoNotificacion.OMITIDA;
         this.ultimoError = motivo;
     }
 
-    /** Se llama antes de cada intento: guarda el teléfono usado y cuenta el intento. */
-    public void registrarIntento(String telefono) {
-        this.telefono = telefono;
+    /** Se llama antes de cada intento: guarda el chat usado y cuenta el intento. */
+    public void registrarIntento(String telegramChatId) {
+        this.telegramChatId = telegramChatId;
         this.intentos++;
     }
 
@@ -107,7 +109,7 @@ public class Notificacion {
     public Long getId() { return id; }
     public EventoNotificacion getEvento() { return evento; }
     public String getUsuarioId() { return usuarioId; }
-    public String getTelefono() { return telefono; }
+    public String getTelegramChatId() { return telegramChatId; }
     public EstadoNotificacion getEstado() { return estado; }
     public int getIntentos() { return intentos; }
     public String getUltimoError() { return ultimoError; }

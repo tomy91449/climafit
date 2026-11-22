@@ -6,11 +6,11 @@ import java.time.LocalDateTime;
 
 public record ContactoResponse(
         String usuarioId,
-        String telefono,
-        boolean aceptaWhatsapp,
+        String telegramChatId,
+        boolean aceptaTelegram,
         LocalDateTime actualizado) {
 
     public static ContactoResponse de(Contacto c) {
-        return new ContactoResponse(c.getUsuarioId(), c.getTelefono(), c.isAceptaWhatsapp(), c.getActualizado());
+        return new ContactoResponse(c.getUsuarioId(), c.getTelegramChatId(), c.isAceptaTelegram(), c.getActualizado());
     }
 }

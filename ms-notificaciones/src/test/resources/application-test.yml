@@ -6,6 +6,6 @@ spring:
     password:
 
 climafit:
-  whatsapp:
+  telegram:
     proveedor: log
     espera-inicial: PT0S

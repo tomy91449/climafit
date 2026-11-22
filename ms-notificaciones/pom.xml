@@ -15,7 +15,7 @@
     <artifactId>ms-notificaciones</artifactId>
     <version>1.0.0</version>
     <name>ms-notificaciones</name>
-    <description>Contactos, consentimiento y envío de avisos por WhatsApp</description>
+    <description>Contactos, consentimiento y envío de avisos por Telegram</description>
 
     <properties>
         <java.version>21</java.version>

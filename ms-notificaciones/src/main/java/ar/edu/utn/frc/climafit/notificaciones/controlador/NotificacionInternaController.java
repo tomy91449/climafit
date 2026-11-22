@@ -32,7 +32,7 @@ public class NotificacionInternaController {
 
     /**
      * 202 Accepted (y no 201): el pedido quedó registrado pero los mensajes todavía no se mandaron;
-     * eso ocurre en segundo plano. ms-clases no espera a WhatsApp.
+     * eso ocurre en segundo plano. ms-clases no espera a Telegram.
      */
     @PostMapping
     @PreAuthorize("hasRole('SERVICIO')")

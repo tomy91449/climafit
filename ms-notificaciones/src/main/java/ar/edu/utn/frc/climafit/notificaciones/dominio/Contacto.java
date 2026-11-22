@@ -19,11 +19,15 @@ public class Contacto {
     @Column(name = "usuario_id")
     private String usuarioId;
 
-    /** Formato E.164, por ejemplo +5493511234567. Puede ser null si el usuario no quiere avisos. */
-    private String telefono;
+    /**
+     * Chat de Telegram del usuario, por ejemplo 123456789. Existe recién cuando el usuario le mandó
+     * /start al bot: un bot no puede escribirle a un número de teléfono. Puede ser null si no quiere avisos.
+     */
+    @Column(name = "telegram_chat_id")
+    private String telegramChatId;
 
-    @Column(name = "acepta_whatsapp", nullable = false)
-    private boolean aceptaWhatsapp;
+    @Column(name = "acepta_telegram", nullable = false)
+    private boolean aceptaTelegram;
 
     @Column(nullable = false)
     private LocalDateTime actualizado;
@@ -36,19 +40,19 @@ public class Contacto {
         this.usuarioId = usuarioId;
     }
 
-    public void actualizar(String telefono, boolean aceptaWhatsapp) {
-        this.telefono = telefono;
-        this.aceptaWhatsapp = aceptaWhatsapp;
+    public void actualizar(String telegramChatId, boolean aceptaTelegram) {
+        this.telegramChatId = telegramChatId;
+        this.aceptaTelegram = aceptaTelegram;
         this.actualizado = LocalDateTime.now();
     }
 
-    /** RN14: solo se le envía WhatsApp si aceptó Y tiene teléfono registrado. */
-    public boolean puedeRecibirWhatsapp() {
-        return aceptaWhatsapp && telefono != null && !telefono.isBlank();
+    /** RN14: solo se le envía por Telegram si aceptó Y tiene su chat registrado. */
+    public boolean puedeRecibirTelegram() {
+        return aceptaTelegram && telegramChatId != null && !telegramChatId.isBlank();
     }
 
     public String getUsuarioId() { return usuarioId; }
-    public String getTelefono() { return telefono; }
-    public boolean isAceptaWhatsapp() { return aceptaWhatsapp; }
+    public String getTelegramChatId() { return telegramChatId; }
+    public boolean isAceptaTelegram() { return aceptaTelegram; }
     public LocalDateTime getActualizado() { return actualizado; }
 }

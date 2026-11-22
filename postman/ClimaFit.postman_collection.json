@@ -858,10 +858,10 @@
     },
     {
       "name": "03 - Contactos (ms-notificaciones)",
-      "description": "Teléfono y consentimiento para WhatsApp (F10, RN14). alumno2 no acepta WhatsApp para verificar notificaciones OMITIDAS.",
+      "description": "Chat de Telegram y consentimiento para avisos (F10, RN14). alumno2 no acepta Telegram para verificar notificaciones OMITIDAS.",
       "item": [
         {
-          "name": "Alumno 1 acepta WhatsApp",
+          "name": "Alumno 1 acepta Telegram",
           "request": {
             "method": "PUT",
             "header": [
@@ -883,7 +883,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"telefono\": \"{{telefonoPrueba}}\",\n  \"aceptaWhatsapp\": true\n}"
+              "raw": "{\n  \"telegramChatId\": \"{{telegramChatIdPrueba}}\",\n  \"aceptaTelegram\": true\n}"
             }
           },
           "event": [
@@ -899,7 +899,7 @@
           ]
         },
         {
-          "name": "Alumno 2 NO acepta WhatsApp",
+          "name": "Alumno 2 NO acepta Telegram",
           "request": {
             "method": "PUT",
             "header": [
@@ -921,7 +921,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"telefono\": \"+5493510000002\",\n  \"aceptaWhatsapp\": false\n}"
+              "raw": "{\n  \"telegramChatId\": \"100000002\",\n  \"aceptaTelegram\": false\n}"
             }
           },
           "event": [
@@ -937,7 +937,7 @@
           ]
         },
         {
-          "name": "Alumno 3 acepta WhatsApp",
+          "name": "Alumno 3 acepta Telegram",
           "request": {
             "method": "PUT",
             "header": [
@@ -959,7 +959,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"telefono\": \"{{telefonoPrueba}}\",\n  \"aceptaWhatsapp\": true\n}"
+              "raw": "{\n  \"telegramChatId\": \"{{telegramChatIdPrueba}}\",\n  \"aceptaTelegram\": true\n}"
             }
           },
           "event": [
@@ -975,7 +975,7 @@
           ]
         },
         {
-          "name": "Profesor 1 acepta WhatsApp (alertas)",
+          "name": "Profesor 1 acepta Telegram (alertas)",
           "request": {
             "method": "PUT",
             "header": [
@@ -997,7 +997,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"telefono\": \"{{telefonoPrueba}}\",\n  \"aceptaWhatsapp\": true\n}"
+              "raw": "{\n  \"telegramChatId\": \"{{telegramChatIdPrueba}}\",\n  \"aceptaTelegram\": true\n}"
             }
           },
           "event": [
@@ -1013,7 +1013,7 @@
           ]
         },
         {
-          "name": "Teléfono inválido -> 400",
+          "name": "Chat id de Telegram inválido -> 400",
           "request": {
             "method": "PUT",
             "header": [
@@ -1035,7 +1035,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"telefono\": \"123\",\n  \"aceptaWhatsapp\": true\n}"
+              "raw": "{\n  \"telegramChatId\": \"no-es-un-numero\",\n  \"aceptaTelegram\": true\n}"
             }
           },
           "event": [
@@ -1075,7 +1075,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Acepta WhatsApp\", () => pm.expect(pm.response.json().aceptaWhatsapp).to.eql(true));"
+                  "pm.test(\"Acepta Telegram\", () => pm.expect(pm.response.json().aceptaTelegram).to.eql(true));"
                 ]
               }
             }
@@ -2002,7 +2002,7 @@
                   "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
                   "const n = pm.response.json();",
                   "pm.test(\"Alumno 1 notificado\", () => pm.expect(n.some(x => x.estado === \"ENVIADA\")).to.be.true);",
-                  "pm.test(\"Alumno 2 OMITIDA (no aceptó WhatsApp)\", () => pm.expect(n.some(x => x.estado === \"OMITIDA\")).to.be.true);",
+                  "pm.test(\"Alumno 2 OMITIDA (no aceptó Telegram)\", () => pm.expect(n.some(x => x.estado === \"OMITIDA\")).to.be.true);",
                   "pm.test(\"Sin duplicados por alumno\", () => { const k = n.map(x => x.eventoId + x.usuarioId); pm.expect(new Set(k).size).to.eql(k.length); });"
                 ]
               }

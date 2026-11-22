@@ -24,7 +24,7 @@ import java.util.Set;
  * Registro de eventos y consulta de notificaciones (F14).
  * <p>
  * El registro es rápido a propósito: guarda el evento y una notificación PENDIENTE por destinatario
- * y termina. ms-clases recibe el 202 al instante y no queda esperando a WhatsApp. El envío lo hace
+ * y termina. ms-clases recibe el 202 al instante y no queda esperando a Telegram. El envío lo hace
  * {@link EnvioNotificaciones} en otro hilo, recién cuando la transacción se confirmó.
  */
 @Service

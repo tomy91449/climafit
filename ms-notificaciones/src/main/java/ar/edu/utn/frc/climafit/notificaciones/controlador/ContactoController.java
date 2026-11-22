@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/contactos")
-@Tag(name = "Contactos", description = "Teléfono y consentimiento para avisos por WhatsApp (F10, RN14)")
+@Tag(name = "Contactos", description = "Chat de Telegram y consentimiento para avisos (F10, RN14)")
 public class ContactoController {
 
     private final ContactoService servicio;
@@ -28,7 +28,7 @@ public class ContactoController {
     }
 
     @PutMapping("/mio")
-    @Operation(summary = "Registrar o actualizar el teléfono y el consentimiento para avisos por WhatsApp")
+    @Operation(summary = "Registrar o actualizar el chat de Telegram y el consentimiento para avisos")
     public ContactoResponse guardar(@Valid @RequestBody ContactoRequest request) {
         return servicio.guardarMio(request);
     }

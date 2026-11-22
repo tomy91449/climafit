@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Textos de los avisos por WhatsApp (en español, con la actividad, la fecha, el motivo y la
+ * Textos de los avisos por Telegram (en español, con la actividad, la fecha, el motivo y la
  * nueva fecha si la hay). Ejemplo de la Fase 0: "Tu clase de Yoga del 20/11 18:00 se
  * reprogramó al 21/11 18:00: probabilidad de lluvia 90%."
  */
