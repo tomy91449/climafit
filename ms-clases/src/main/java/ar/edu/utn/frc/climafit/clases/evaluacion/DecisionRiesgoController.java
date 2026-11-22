@@ -1,5 +1,7 @@
 package ar.edu.utn.frc.climafit.clases.evaluacion;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import ar.edu.utn.frc.climafit.clases.clase.Clase;
 import ar.edu.utn.frc.climafit.clases.clase.ClaseRepository;
 import ar.edu.utn.frc.climafit.clases.clase.ClaseRespuesta;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /** PATCH /clases/{id}/decision-riesgo (RN05, RN12). Seguridad: profesor dueño. */
+@Tag(name = "Clases en riesgo", description = "Decisión del profesor sobre una clase EN_RIESGO (RN12)")
 @RestController
 @RequestMapping("/clases")
 public class DecisionRiesgoController {
@@ -40,6 +43,7 @@ public class DecisionRiesgoController {
         this.usuario = usuario;
     }
 
+    @Operation(summary = "Mantener o suspender una clase EN_RIESGO (solo el profesor dueño)")
     @PatchMapping("/{id}/decision-riesgo")
     @PreAuthorize("hasRole('PROFESOR')")
     public ClaseRespuesta decidir(@PathVariable Long id, @Valid @RequestBody DecisionRequest pedido) {

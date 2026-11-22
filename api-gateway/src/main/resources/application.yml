@@ -61,3 +61,22 @@ management:
     web:
       exposure:
         include: health
+
+# Swagger UI unificado: http://localhost:8080/swagger-ui.html
+# Cada entrada es la documentación OpenAPI de un microservicio, que el gateway busca en
+# /docs/<servicio> (ver DocumentacionGatewayConfig). Desde ahí, "Try it out" llama a /api/...
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    urls-primary-name: ms-actividades
+    urls:
+      - name: ms-actividades
+        url: /docs/actividades
+      - name: ms-clases
+        url: /docs/clases
+      - name: ms-clima
+        url: /docs/clima
+      - name: ms-notificaciones
+        url: /docs/notificaciones

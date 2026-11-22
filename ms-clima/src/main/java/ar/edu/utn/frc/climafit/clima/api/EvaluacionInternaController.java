@@ -1,5 +1,7 @@
 package ar.edu.utn.frc.climafit.clima.api;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import ar.edu.utn.frc.climafit.clima.evaluacion.EvaluacionClimaService;
 import ar.edu.utn.frc.climafit.clima.modelo.CriteriosClimaticos;
 import ar.edu.utn.frc.climafit.clima.modelo.EvaluacionVentana;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /** Contrato interno ms-clases -> ms-clima (Fase 0, punto 9). No está expuesto en el gateway. */
+@Tag(name = "Interno", description = "Uso exclusivo de otros microservicios (token de servicio); no se expone en el gateway")
 @RestController
 @RequestMapping("/internal")
 public class EvaluacionInternaController {
@@ -61,6 +64,7 @@ public class EvaluacionInternaController {
         this.servicio = servicio;
     }
 
+    @Operation(summary = "Evaluar los criterios de una actividad en una o varias ventanas horarias (RN10)")
     @PostMapping("/evaluaciones")
     @PreAuthorize("hasRole('SERVICIO')")
     public RespuestaEvaluaciones evaluar(@Valid @RequestBody SolicitudEvaluacion pedido) {

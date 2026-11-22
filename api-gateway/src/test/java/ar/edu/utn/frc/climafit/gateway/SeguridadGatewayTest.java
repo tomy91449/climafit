@@ -136,6 +136,32 @@ class SeguridadGatewayTest {
         cliente.get().uri("/actuator/health").exchange().expectStatus().isOk();
     }
 
+    // ---------- Swagger UI unificado: la documentación es pública, ejecutar no ----------
+
+    @Test
+    void swaggerUiEsPublico() {
+        cliente.get().uri("/swagger-ui.html").exchange()
+                .expectStatus().value(status -> assertThat(status).isNotIn(401, 403));
+        cliente.get().uri("/v3/api-docs/swagger-config").exchange()
+                .expectStatus().isOk()
+                .expectBody().jsonPath("$.urls[0].url").isEqualTo("/docs/actividades");
+    }
+
+    @Test
+    void laDocumentacionDeCadaServicioEsPublicaYApuntaAlGateway() {
+        cliente.get().uri("/docs/clases").exchange()
+                .expectStatus().isOk()
+                .expectBody().jsonPath("$.servers[0].url").isEqualTo("/api");
+        assertThat(rutaRecibida.get()).isEqualTo("/v3/api-docs");
+        assertThat(autorizacionRecibida.get()).isNull();
+    }
+
+    @Test
+    void laDocumentacionSoloSeLee() {
+        cliente.post().uri("/docs/clases").exchange().expectStatus().isUnauthorized();
+        assertThat(rutaRecibida.get()).as("no debe llegar al microservicio").isNull();
+    }
+
     // ---------- 403 / permitido: reglas por rol y método (sección 07) ----------
 
     @ParameterizedTest(name = "{1} {2} como {0} -> {3}")

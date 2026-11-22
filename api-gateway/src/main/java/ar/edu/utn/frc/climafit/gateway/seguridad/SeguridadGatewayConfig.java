@@ -53,6 +53,10 @@ public class SeguridadGatewayConfig {
 
                 .authorizeExchange(rutas -> rutas
                         .pathMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                        // Swagger UI unificado y la documentación OpenAPI de cada servicio: son públicos,
+                        // como en los microservicios. Para EJECUTAR un endpoint igual hace falta el token.
+                        .pathMatchers(GET, "/swagger-ui.html", "/swagger-ui/**", "/webjars/**",
+                                "/v3/api-docs/**", "/docs/**").permitAll()
 
                         // ---- ms-actividades: catálogo ----
                         // Actividades y espacios: todos leen, solo ADMIN registra, modifica o da de baja.

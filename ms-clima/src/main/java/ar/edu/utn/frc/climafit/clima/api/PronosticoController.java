@@ -1,5 +1,7 @@
 package ar.edu.utn.frc.climafit.clima.api;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import ar.edu.utn.frc.climafit.clima.evaluacion.EvaluacionClimaService;
 import ar.edu.utn.frc.climafit.clima.modelo.HoraPronostico;
 import jakarta.validation.constraints.DecimalMax;
@@ -14,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+@Tag(name = "Pronóstico", description = "Pronóstico horario de una ubicación")
 @RestController
 @RequestMapping("/clima")
 @Validated
@@ -37,6 +40,7 @@ public class PronosticoController {
     }
 
     /** Pronóstico horario de una ubicación (PROFESOR / ADMIN). */
+    @Operation(summary = "Consultar el pronóstico hora por hora de una ubicación")
     @GetMapping("/pronostico")
     @PreAuthorize("hasAnyRole('PROFESOR','ADMIN')")
     public PronosticoRespuesta pronostico(

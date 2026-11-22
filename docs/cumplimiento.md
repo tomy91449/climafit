@@ -29,7 +29,7 @@ Estados: ✅ verificado · ⚠️ funciona pero con una observación · ⏳ pend
 | API pública externa (Open-Meteo) en la decisión de negocio | Persona 4 | Carpeta 10: pronóstico real en modo REAL | ✅ |
 | Librería `climafit-commons` en `.m2`, usada por 4 microservicios | Persona 2 | Dependencia en los 4 `pom.xml`; Dockerfiles multi-etapa que la instalan antes de compilar | ✅ |
 | PostgreSQL, una base por servicio | Persona 1 | `infra/postgres/init.sh` crea un usuario por base, dueño solo de ella. En `postgres-actividades`: `actividades_db`. En `postgres`: `clases_db`, `notificaciones_db` y `keycloak_db` | ⏳ volver a verificar con dos contenedores |
-| APIs REST documentadas con OpenAPI | Cada dueño; Persona 1 el Swagger unificado | `/v3/api-docs` de cada servicio: 39 endpoints (15 + 15 + 5 + 4) | ⚠️ ver observación 2 |
+| APIs REST documentadas con OpenAPI | Cada dueño; Persona 1 el Swagger unificado | Swagger UI unificado en `http://localhost:8080/swagger-ui.html` con los 4 servicios (39 endpoints: 15 + 15 + 5 + 4), todos con descripción y botón Authorize | ✅ |
 | Despliegue completo con Docker Compose | Persona 1 | CP7: los 8 contenedores (con `postgres-actividades`) quedan `healthy` sin pasos manuales | ⏳ volver a verificar con dos contenedores |
 
 ## 2. Reglas de negocio
@@ -63,7 +63,7 @@ Estados: ✅ verificado · ⚠️ funciona pero con una observación · ⏳ pend
 | CP4 Clase en riesgo y decisión del profesor | Persona 4 | Carpeta 07 (viento de 30 km/h, límite de Yoga 35 km/h) | ✅ |
 | CP5 Sin día viable y reagenda manual | Persona 3, con 4 | Carpeta 08 | ✅ |
 | CP6 Falla del servicio de clima | Persona 4 | Carpeta 05 | ✅ |
-| CP7 Despliegue e integración real | Persona 1, con 2 | `docker compose up -d --build` desde cero + carpeta 10 | ⚠️ falta el Swagger UI unificado (observación 2) |
+| CP7 Despliegue e integración real | Persona 1, con 2 | `docker compose up -d --build` desde cero + carpeta 10 + Swagger UI unificado | ✅ |
 
 ## 4. Observaciones abiertas
 
@@ -71,9 +71,11 @@ Estados: ✅ verificado · ⚠️ funciona pero con una observación · ⏳ pend
    solo por probabilidad de lluvia y mantiene el riesgo "a 10 puntos". La regla acordada está en
    [contratos.md](contratos.md), sección 6.2, y en la propuesta. Las carpetas 06 a 08 pasan igual porque
    sus escenarios dan el mismo resultado con las dos reglas; hay que ajustar el evaluador y sus tests `rn10_*`.
-2. **Swagger UI unificado** (Persona 1). Cada microservicio publica su `/v3/api-docs` con sus endpoints,
-   pero el gateway no tiene el Swagger UI unificado de la propuesta: `http://localhost:8080/swagger-ui.html`
-   responde 401 y `api-gateway` no incluye springdoc (plan, tarea 1.4). CP7 lo pide en su resultado esperado.
+2. ~~**Swagger UI unificado**~~ (resuelto en la rama `feat/swagger-unificado`). El gateway publica
+   `http://localhost:8080/swagger-ui.html` con un selector de los 4 microservicios; "Try it out" llama a
+   `/api/...` a través del gateway. ms-clases, ms-clima y ms-notificaciones ahora tienen título, descripción
+   de cada endpoint y botón Authorize, como ms-actividades. Queda como mejora documentar en Swagger las
+   respuestas de error de cada endpoint (`@ApiResponse`).
 3. **Nombres de tests de ms-notificaciones** (Persona 1). El plan pide `rn14_...`; hoy son `rn14Se...` o no
    llevan el código de la regla. Funcionan, pero conviene renombrarlos para que se encuentren por regla.
 4. **Envío real por Telegram** (Persona 1). El canal pasó de WhatsApp a Telegram (Bot API): la cuenta de prueba
