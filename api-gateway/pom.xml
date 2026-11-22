@@ -36,7 +36,8 @@
 
     <!--
         No usa climafit-commons: el gateway es reactivo (WebFlux) y la librería está hecha
-        para servicios servlet (Spring MVC). Su seguridad se configura acá mismo.
+        para servicios servlet (Spring MVC). Su seguridad se configura acá mismo, con los mismos
+        criterios que la librería: roles de Keycloak, formato de error y correlation id.
     -->
     <dependencies>
         <dependency>
@@ -55,6 +56,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

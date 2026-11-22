@@ -18,10 +18,18 @@ spring:
           # (la red de Docker y localhost). Sin esto, el gateway no envía X-Forwarded-Prefix=/api
           # y los microservicios arman URLs internas (ej. Location: http://ms-actividades:8080/...).
           trusted-proxies: '10\..*|172\.(1[6-9]|2[0-9]|3[01])\..*|192\.168\..*|127\..*|0:0:0:0:0:0:0:1'
+          # Si un microservicio no acepta la conexión en 2 s o no responde en 60 s, el gateway
+          # corta y responde 503 SERVICIO_NO_DISPONIBLE (ManejadorErroresGateway).
+          # 60 s porque la evaluación general (POST /api/clases/evaluaciones) consulta el clima de varias clases.
+          httpclient:
+            connect-timeout: ${GATEWAY_TIMEOUT_CONEXION_MS:2000}
+            response-timeout: ${GATEWAY_TIMEOUT_RESPUESTA:60s}
           # Rutas públicas -> microservicio. StripPrefix=1 saca el "/api":
           #   GET /api/actividades/1  ->  GET http://ms-actividades:8080/actividades/1
           # Las rutas /internal/** NO están acá: desde afuera no existen (404). Solo se llaman
           # dentro de la red de Docker, entre microservicios y con token de servicio.
+          # Además BloqueoRutasInternasFilter corta /api/xxx/../internal/... y similares.
+          # Quién puede usar cada ruta (rol y método) está en SeguridadGatewayConfig.
           routes:
             - id: ms-actividades
               uri: ${MS_ACTIVIDADES_URL:http://localhost:8081}
