@@ -1,7 +1,7 @@
 %% C1 - Diagrama de Contexto (C4) - ClimaFit
 flowchart LR
   subgraph usuarios["Usuarios de ClimaFit"]
-  alumno["<b>Alumno</b><br/>[Persona]<br/><br/>Consulta clases, se inscribe<br/>y recibe avisos por Telegram"]
+  alumno["<b>Alumno</b><br/>[Persona]<br/><br/>Consulta clases, se inscribe,<br/>vincula su Telegram y recibe avisos"]
   profesor["<b>Profesor</b><br/>[Persona]<br/><br/>Crea clases y rutinas;<br/>decide sobre clases en riesgo"]
   admin["<b>Administrador</b><br/>[Persona]<br/><br/>Gestiona actividades,<br/>criterios climáticos y espacios"]
   end
@@ -10,13 +10,14 @@ flowchart LR
 
   keycloak["<b>Keycloak</b><br/>[Sistema externo - Identity Provider]<br/><br/>Autenticación OIDC,<br/>emisión de JWT y roles"]
   openmeteo["<b>Open-Meteo</b><br/>[Sistema externo - API pública]<br/><br/>Pronóstico horario por coordenadas"]
-  telegram["<b>Telegram Bot API</b><br/>[Sistema externo]<br/><br/>Envío de mensajes de Telegram"]
+  telegram["<b>Telegram Bot API</b><br/>[Sistema externo]<br/><br/>Bot de avisos: el usuario lo inicia<br/>con /start y después recibe los avisos"]
 
   usuarios -- "Se autentican y obtienen JWT<br/>[OIDC]" --> keycloak
   profesor -- "Gestiona clases y decide<br/>[HTTPS/JSON + JWT]" --> climafit
   admin -- "Administra catálogo<br/>[HTTPS/JSON + JWT]" --> climafit
   alumno -- "Consulta clases e inscribe<br/>[HTTPS/JSON + JWT]" --> climafit
-  climafit -- "Solicita envío de avisos<br/>[HTTPS/JSON]" --> telegram
+  usuarios -- "Inician el chat con el bot:<br/>/start #lt;código#gt; (una sola vez)<br/>[Telegram]" --> telegram
+  climafit -- "Lee los /start y guarda el chat;<br/>envía los avisos [HTTPS/JSON]" --> telegram
   climafit -- "Valida JWT y obtiene<br/>token de servicio [OIDC]" --> keycloak
   climafit -- "Consulta pronóstico<br/>[HTTPS/JSON]" --> openmeteo
   telegram -. "Entrega avisos<br/>[Telegram]" .-> alumno

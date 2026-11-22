@@ -11,7 +11,7 @@ flowchart LR
     actividades["<b>ms-actividades</b><br/>[Java 21 · Spring Boot]<br/><br/>Tipos de actividad y criterios climáticos,<br/>espacios y ejercicios"]
     clases["<b>ms-clases</b><br/>[Java 21 · Spring Boot]<br/><br/>Clases, rutinas, inscripciones, estados,<br/>historial; orquesta evaluación y reprogramación<br/>(tarea programada)"]
     clima["<b>ms-clima</b><br/>[Java 21 · Spring Boot]<br/><br/>Consulta y cachea el pronóstico;<br/>evalúa criterios: APTA / EN_RIESGO / NO_APTA<br/>(perfil demo con escenarios simulados)"]
-    notificaciones["<b>ms-notificaciones</b><br/>[Java 21 · Spring Boot]<br/><br/>Contactos y consentimiento,<br/>envío por Telegram con reintentos,<br/>registro de notificaciones"]
+    notificaciones["<b>ms-notificaciones</b><br/>[Java 21 · Spring Boot]<br/><br/>Contactos y consentimiento,<br/>vinculación del chat con /start,<br/>envío por Telegram con reintentos,<br/>registro de notificaciones"]
     commons[["<b>climafit-commons</b><br/>[JAR Maven]<br/><br/>Errores, seguridad, correlation id,<br/>cliente HTTP con timeout y reintento"]]
     db[("<b>PostgreSQL</b><br/>[DBMS · contenedor postgres]<br/><br/>clases_db · notificaciones_db<br/>keycloak_db")]
     dbActividades[("<b>PostgreSQL actividades</b><br/>[DBMS · contenedor postgres-actividades]<br/><br/>actividades_db")]
@@ -19,10 +19,11 @@ flowchart LR
   end
 
   openmeteo["<b>Open-Meteo</b><br/>[API pública externa]<br/><br/>Pronóstico horario"]
-  telegram["<b>Telegram Bot API</b><br/>[Sistema externo]<br/><br/>Mensajería Telegram"]
+  telegram["<b>Telegram Bot API</b><br/>[Sistema externo]<br/><br/>Bot de avisos de ClimaFit"]
 
   usuarios -- "Obtiene token<br/>[OIDC]" --> keycloak
   usuarios -- "Solicitudes REST + JWT<br/>[HTTPS/JSON]" --> gateway
+  usuarios -- "Abre el link y toca Iniciar:<br/>/start #lt;código#gt; (una sola vez)<br/>[app Telegram]" --> telegram
   gateway -- "Obtiene claves públicas<br/>[JWKS]" --> keycloak
   gateway -- "/api/actividades, /espacios, /ejercicios<br/>[HTTP/JSON]" --> actividades
   gateway -- "/api/clases, /inscripciones<br/>[HTTP/JSON]" --> clases
@@ -40,7 +41,8 @@ flowchart LR
   keycloak -- "JDBC" --> db
 
   clima -- "Consulta pronóstico<br/>[HTTPS/JSON]" --> openmeteo
-  notificaciones -- "Envía mensajes<br/>[HTTPS/JSON]" --> telegram
+  notificaciones -- "Lee los /start cada 3 s (getUpdates)<br/>y guarda el chat; envía los avisos<br/>(sendMessage) [HTTPS/JSON]" --> telegram
+  telegram -. "Entrega avisos<br/>[Telegram]" .-> usuarios
 
   actividades -.->|"dependencia Maven"| commons
   clases -.->|"dependencia Maven"| commons

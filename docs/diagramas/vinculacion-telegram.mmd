@@ -1,0 +1,45 @@
+%% Secuencia - Vinculación con Telegram y avisos posteriores - ClimaFit
+sequenceDiagram
+  autonumber
+  actor U as Alumno o Profesor
+  participant GW as API Gateway
+  participant N as ms-notificaciones
+  participant DB as notificaciones_db
+  participant T as Telegram Bot API
+  participant C as ms-clases
+
+  Note over U,T: Un bot de Telegram no puede escribirle primero a nadie<br/>(lo prohíbe Telegram para evitar spam y bloqueos del bot).<br/>Por eso el usuario inicia el chat una sola vez con /start.
+
+  rect rgb(232, 241, 251)
+    Note over U,DB: 1. Pedir el link (F10, RN14)
+    U->>GW: PUT /api/contactos/mio {"aceptaTelegram": true} + JWT
+    GW->>N: PUT /contactos/mio (valida JWT y rol)
+    N->>DB: guarda el consentimiento y un código aleatorio<br/>(un solo uso, vence en 24 h)
+    N-->>U: 200 {vinculado: false, linkVinculacion: t.me/#lt;bot#gt;?start=#lt;código#gt;}
+  end
+
+  rect rgb(232, 245, 233)
+    Note over U,T: 2. El usuario inicia el chat
+    U->>T: abre el link y toca "Iniciar" → /start #lt;código#gt;
+    loop cada 3 s (tarea programada)
+      N->>T: getUpdates(offset)
+      T-->>N: mensajes nuevos: /start #lt;código#gt;, chat_id
+    end
+    N->>DB: busca el código vigente
+    alt código válido
+      N->>DB: guarda el chat_id en el contacto y borra el código
+      N->>T: sendMessage "¡Listo! Tu Telegram quedó vinculado"
+    else vencido, ya usado o inexistente
+      N->>T: sendMessage "Este link no es válido o ya venció"
+    end
+    T-->>U: respuesta del bot
+  end
+
+  rect rgb(255, 243, 224)
+    Note over U,C: 3. Desde ahora, cada aviso usa el chat guardado (F14, RN14 a RN16)
+    C->>N: POST /internal/notificaciones (token de servicio)<br/>SUSPENSION · REPROGRAMACION · SIN_FECHA · CANCELACION · ALERTA_RIESGO
+    N->>DB: registra el evento y lee el chat_id de cada destinatario
+    N->>T: sendMessage(chat_id, aviso) con reintentos
+    T-->>U: aviso en Telegram
+    N->>DB: notificación ENVIADA, OMITIDA o FALLIDA
+  end

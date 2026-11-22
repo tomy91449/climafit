@@ -120,7 +120,7 @@ Prioridad: **Alta** = imprescindible para el proceso central. **Media** = comple
 
 **F10 — Preferencias de contacto**
 - Actor: alumno o profesor.
-- Comportamiento: registrar el chat de Telegram y aceptar o rechazar los avisos por Telegram.
+- Comportamiento: aceptar o rechazar los avisos por Telegram. Al aceptar, el usuario recibe un link al bot; cuando toca "Iniciar" (/start), su chat queda guardado para todos los avisos siguientes.
 - Resultado observable: la preferencia queda guardada.
 - Prioridad: Alta.
 
@@ -328,9 +328,9 @@ flowchart TD
   M -- "No" --> M2["P6. Clase pasa a SUSPENDIDA_SIN_FECHA<br/>el profesor la reagenda (F06)"]
   M1 --> N
   M2 --> N
-  N["P7. Notificar a cada inscripto (F14)<br/>ms-notificaciones · RN15"] --> O{"¿Aceptó avisos y registró<br/>su chat de Telegram? · RN14"}
+  N["P7. Notificar a cada inscripto (F14)<br/>ms-notificaciones · RN15"] --> O{"¿Aceptó avisos y vinculó su<br/>Telegram con /start? · RN14"}
   O -- "No" --> O1["Notificación OMITIDA"]
-  O -- "Sí" --> P["Envío por Telegram<br/>con reintentos · RN16"]
+  O -- "Sí" --> P["Envío por Telegram al chat guardado<br/>con reintentos · RN16"]
   P --> Q["Notificación ENVIADA o FALLIDA"]
   Q --> S["P8. El alumno mantiene su lugar<br/>o cancela su inscripción (F09)"]
   S --> Z(["Fin: clase resuelta, alumnos avisados,<br/>cambios de estado en el historial (F15)"])
@@ -383,7 +383,7 @@ Definición editable (`docs/diagramas/c4-contexto.mmd`, Mermaid con la convenci�
 %% C1 - Diagrama de Contexto (C4) - ClimaFit
 flowchart LR
   subgraph usuarios["Usuarios de ClimaFit"]
-  alumno["<b>Alumno</b><br/>[Persona]<br/><br/>Consulta clases, se inscribe<br/>y recibe avisos por Telegram"]
+  alumno["<b>Alumno</b><br/>[Persona]<br/><br/>Consulta clases, se inscribe,<br/>vincula su Telegram y recibe avisos"]
   profesor["<b>Profesor</b><br/>[Persona]<br/><br/>Crea clases y rutinas;<br/>decide sobre clases en riesgo"]
   admin["<b>Administrador</b><br/>[Persona]<br/><br/>Gestiona actividades,<br/>criterios climáticos y espacios"]
   end
@@ -392,13 +392,14 @@ flowchart LR
 
   keycloak["<b>Keycloak</b><br/>[Sistema externo - Identity Provider]<br/><br/>Autenticación OIDC,<br/>emisión de JWT y roles"]
   openmeteo["<b>Open-Meteo</b><br/>[Sistema externo - API pública]<br/><br/>Pronóstico horario por coordenadas"]
-  telegram["<b>Telegram Bot API</b><br/>[Sistema externo]<br/><br/>Envío de mensajes de Telegram"]
+  telegram["<b>Telegram Bot API</b><br/>[Sistema externo]<br/><br/>Bot de avisos: el usuario lo inicia<br/>con /start y después recibe los avisos"]
 
   usuarios -- "Se autentican y obtienen JWT<br/>[OIDC]" --> keycloak
   profesor -- "Gestiona clases y decide<br/>[HTTPS/JSON + JWT]" --> climafit
   admin -- "Administra catálogo<br/>[HTTPS/JSON + JWT]" --> climafit
   alumno -- "Consulta clases e inscribe<br/>[HTTPS/JSON + JWT]" --> climafit
-  climafit -- "Solicita envío de avisos<br/>[HTTPS/JSON]" --> telegram
+  usuarios -- "Inician el chat con el bot:<br/>/start #lt;código#gt; (una sola vez)<br/>[Telegram]" --> telegram
+  climafit -- "Lee los /start y guarda el chat;<br/>envía los avisos [HTTPS/JSON]" --> telegram
   climafit -- "Valida JWT y obtiene<br/>token de servicio [OIDC]" --> keycloak
   climafit -- "Consulta pronóstico<br/>[HTTPS/JSON]" --> openmeteo
   telegram -. "Entrega avisos<br/>[Telegram]" .-> alumno
@@ -414,20 +415,21 @@ flowchart LR
 ```
 
 **Elementos**
-- **Alumno (persona):** consulta clases, se inscribe o cancela, registra su chat de Telegram y recibe los avisos por Telegram.
+- **Alumno (persona):** consulta clases, se inscribe o cancela, vincula su Telegram iniciando el chat con el bot y recibe los avisos por Telegram.
 - **Profesor (persona):** crea y modifica clases y rutinas, crea ejercicios propios, decide sobre clases en riesgo, reagenda clases sin fecha y consulta el historial y las notificaciones de sus clases.
 - **Administrador (persona):** gestiona tipos de actividad con sus criterios climáticos, espacios y ejercicios base, y puede ejecutar la evaluación general.
 - **ClimaFit Backend (sistema a desarrollar):** gestiona clases al aire libre y ejecuta el proceso de evaluación climática, suspensión, reprogramación y notificación.
 - **Keycloak (sistema externo, Identity Provider):** autentica a los usuarios con OIDC, emite JWT con los roles ADMIN, PROFESOR y ALUMNO, y emite el token de servicio que usan los microservicios entre sí. Se despliega en el mismo Docker Compose, pero en el contexto es un sistema que el equipo no desarrolla.
 - **Open-Meteo (API pública externa):** pronóstico horario por coordenadas (probabilidad de lluvia, precipitación en mm, viento, temperatura y código de tiempo). Es la información que define si una clase se suspende. No requiere API key.
-- **Telegram Bot API (sistema externo):** envía los mensajes de Telegram a alumnos y profesores.
+- **Telegram Bot API (sistema externo):** el bot de avisos de ClimaFit. Telegram no deja que un bot le escriba primero a una persona, así que cada usuario lo inicia una vez con /start; desde ahí el bot le puede enviar los avisos.
 
 **Relaciones**
 - Usuarios → Keycloak: se autentican y obtienen un JWT (OIDC).
 - Alumno, Profesor y Administrador → ClimaFit: solicitudes REST/JSON con el JWT, según su rol.
 - ClimaFit → Keycloak: valida los tokens (claves públicas JWKS) y obtiene un token de servicio con client credentials.
 - ClimaFit → Open-Meteo: consulta el pronóstico de las coordenadas del espacio para las horas de la clase y para los días candidatos.
-- ClimaFit → Telegram: solicita el envío de cada aviso.
+- Alumno y Profesor → Telegram: inician el chat con el bot (/start con el código del link), una sola vez.
+- ClimaFit → Telegram: lee esos /start para guardar el chat de cada usuario y solicita el envío de cada aviso.
 - Telegram → Alumno y Profesor: entrega el aviso (al profesor, las alertas de riesgo).
 
 ---
@@ -452,7 +454,7 @@ flowchart LR
     actividades["<b>ms-actividades</b><br/>[Java 21 · Spring Boot]<br/><br/>Tipos de actividad y criterios climáticos,<br/>espacios y ejercicios"]
     clases["<b>ms-clases</b><br/>[Java 21 · Spring Boot]<br/><br/>Clases, rutinas, inscripciones, estados,<br/>historial; orquesta evaluación y reprogramación<br/>(tarea programada)"]
     clima["<b>ms-clima</b><br/>[Java 21 · Spring Boot]<br/><br/>Consulta y cachea el pronóstico;<br/>evalúa criterios: APTA / EN_RIESGO / NO_APTA<br/>(perfil demo con escenarios simulados)"]
-    notificaciones["<b>ms-notificaciones</b><br/>[Java 21 · Spring Boot]<br/><br/>Contactos y consentimiento,<br/>envío por Telegram con reintentos,<br/>registro de notificaciones"]
+    notificaciones["<b>ms-notificaciones</b><br/>[Java 21 · Spring Boot]<br/><br/>Contactos y consentimiento,<br/>vinculación del chat con /start,<br/>envío por Telegram con reintentos,<br/>registro de notificaciones"]
     commons[["<b>climafit-commons</b><br/>[JAR Maven]<br/><br/>Errores, seguridad, correlation id,<br/>cliente HTTP con timeout y reintento"]]
     db[("<b>PostgreSQL</b><br/>[DBMS · contenedor postgres]<br/><br/>clases_db · notificaciones_db<br/>keycloak_db")]
     dbActividades[("<b>PostgreSQL actividades</b><br/>[DBMS · contenedor postgres-actividades]<br/><br/>actividades_db")]
@@ -460,10 +462,11 @@ flowchart LR
   end
 
   openmeteo["<b>Open-Meteo</b><br/>[API pública externa]<br/><br/>Pronóstico horario"]
-  telegram["<b>Telegram Bot API</b><br/>[Sistema externo]<br/><br/>Mensajería Telegram"]
+  telegram["<b>Telegram Bot API</b><br/>[Sistema externo]<br/><br/>Bot de avisos de ClimaFit"]
 
   usuarios -- "Obtiene token<br/>[OIDC]" --> keycloak
   usuarios -- "Solicitudes REST + JWT<br/>[HTTPS/JSON]" --> gateway
+  usuarios -- "Abre el link y toca Iniciar:<br/>/start #lt;código#gt; (una sola vez)<br/>[app Telegram]" --> telegram
   gateway -- "Obtiene claves públicas<br/>[JWKS]" --> keycloak
   gateway -- "/api/actividades, /espacios, /ejercicios<br/>[HTTP/JSON]" --> actividades
   gateway -- "/api/clases, /inscripciones<br/>[HTTP/JSON]" --> clases
@@ -481,7 +484,8 @@ flowchart LR
   keycloak -- "JDBC" --> db
 
   clima -- "Consulta pronóstico<br/>[HTTPS/JSON]" --> openmeteo
-  notificaciones -- "Envía mensajes<br/>[HTTPS/JSON]" --> telegram
+  notificaciones -- "Lee los /start cada 3 s (getUpdates)<br/>y guarda el chat; envía los avisos<br/>(sendMessage) [HTTPS/JSON]" --> telegram
+  telegram -. "Entrega avisos<br/>[Telegram]" .-> usuarios
 
   actividades -.->|"dependencia Maven"| commons
   clases -.->|"dependencia Maven"| commons
@@ -527,7 +531,7 @@ flowchart LR
 - No tiene base de datos: el pronóstico se puede volver a consultar y las evaluaciones se guardan en ms-clases.
 
 **ms-notificaciones** — Java 21, Spring Boot, Spring Data JPA, `@Async`
-- Contactos y consentimiento.
+- Contactos y consentimiento. Vinculación del chat: cada 3 s lee los /start que recibe el bot (`getUpdates`) y guarda el chat del usuario.
 - Recibe eventos de ms-clases, los registra y responde 202.
 - Envía los mensajes por Telegram en segundo plano, con reintentos e idempotencia (RN14, RN15, RN16).
 - El proveedor es configurable: `bot` (Telegram Bot API), o `log` para demo, que registra el mensaje sin enviarlo.
@@ -558,7 +562,8 @@ flowchart LR
 - ms-clases → ms-clima: REST sincrónico `/internal/evaluaciones`, con una o varias ventanas horarias por llamada.
 - ms-clases → ms-notificaciones: REST `/internal/notificaciones`; la respuesta es inmediata (202) y el envío es asincrónico.
 - ms-clases → Keycloak: token de servicio (client credentials). Todas las llamadas entre servicios usan ese token y los endpoints `/internal/**` exigen el rol SERVICIO.
-- ms-clima → Open-Meteo y ms-notificaciones → Telegram: HTTPS hacia Internet.
+- ms-clima → Open-Meteo y ms-notificaciones → Telegram: HTTPS hacia Internet. ms-notificaciones usa `getUpdates` (polling, sin webhook: no necesita una URL pública) para leer los /start y `sendMessage` para los avisos.
+- Usuarios → Telegram: abren el link de vinculación en la app y tocan "Iniciar".
 - ms-actividades → PostgreSQL actividades (`postgres-actividades`), y ms-clases, ms-notificaciones y Keycloak → PostgreSQL (`postgres`): JDBC, cada uno contra su propia base.
 - Todas las llamadas entre servicios usan el cliente HTTP de `climafit-commons`, con timeout de conexión de 2 s, timeout de lectura de 5 s y hasta 2 reintentos en operaciones de lectura. Si el servicio no responde, se devuelve 503 `SERVICIO_NO_DISPONIBLE` o se aplica RN16 dentro del proceso.
 
@@ -631,6 +636,63 @@ Abreviaturas de la columna Seguridad:
 | ms-notificaciones | Contactos | GET | /contactos/mio | Consultar las preferencias de contacto propias | Autenticado |
 | ms-notificaciones | Notificaciones | GET | /notificaciones?claseId= | Consultar las notificaciones generadas para una clase y su estado | PROFESOR (de esa clase) / ADMIN |
 | ms-notificaciones | Notificaciones | POST | /internal/notificaciones | Registrar un evento de clase y programar el envío a cada destinatario (RN14, RN15) | Servicio (no expuesto en el gateway) |
+
+**Vinculación con Telegram** (`docs/diagramas/vinculacion-telegram.mmd` → `vinculacion-telegram.png`)
+
+![Vinculación con Telegram](diagramas/vinculacion-telegram.png)
+
+```mermaid
+%% Secuencia - Vinculación con Telegram y avisos posteriores - ClimaFit
+sequenceDiagram
+  autonumber
+  actor U as Alumno o Profesor
+  participant GW as API Gateway
+  participant N as ms-notificaciones
+  participant DB as notificaciones_db
+  participant T as Telegram Bot API
+  participant C as ms-clases
+
+  Note over U,T: Un bot de Telegram no puede escribirle primero a nadie<br/>(lo prohíbe Telegram para evitar spam y bloqueos del bot).<br/>Por eso el usuario inicia el chat una sola vez con /start.
+
+  rect rgb(232, 241, 251)
+    Note over U,DB: 1. Pedir el link (F10, RN14)
+    U->>GW: PUT /api/contactos/mio {"aceptaTelegram": true} + JWT
+    GW->>N: PUT /contactos/mio (valida JWT y rol)
+    N->>DB: guarda el consentimiento y un código aleatorio<br/>(un solo uso, vence en 24 h)
+    N-->>U: 200 {vinculado: false, linkVinculacion: t.me/#lt;bot#gt;?start=#lt;código#gt;}
+  end
+
+  rect rgb(232, 245, 233)
+    Note over U,T: 2. El usuario inicia el chat
+    U->>T: abre el link y toca "Iniciar" → /start #lt;código#gt;
+    loop cada 3 s (tarea programada)
+      N->>T: getUpdates(offset)
+      T-->>N: mensajes nuevos: /start #lt;código#gt;, chat_id
+    end
+    N->>DB: busca el código vigente
+    alt código válido
+      N->>DB: guarda el chat_id en el contacto y borra el código
+      N->>T: sendMessage "¡Listo! Tu Telegram quedó vinculado"
+    else vencido, ya usado o inexistente
+      N->>T: sendMessage "Este link no es válido o ya venció"
+    end
+    T-->>U: respuesta del bot
+  end
+
+  rect rgb(255, 243, 224)
+    Note over U,C: 3. Desde ahora, cada aviso usa el chat guardado (F14, RN14 a RN16)
+    C->>N: POST /internal/notificaciones (token de servicio)<br/>SUSPENSION · REPROGRAMACION · SIN_FECHA · CANCELACION · ALERTA_RIESGO
+    N->>DB: registra el evento y lee el chat_id de cada destinatario
+    N->>T: sendMessage(chat_id, aviso) con reintentos
+    T-->>U: aviso en Telegram
+    N->>DB: notificación ENVIADA, OMITIDA o FALLIDA
+  end
+```
+
+- Telegram no permite que un bot inicie una conversación: así evita el spam y que el bot termine bloqueado. Por eso el usuario abre el link y toca "Iniciar", una sola vez.
+- El código del link es aleatorio, de un solo uso y vence en 24 h. Si el usuario rechaza los avisos, el código se anula.
+- Con el chat guardado, ms-notificaciones usa ese mismo chat para todos los avisos: suspensión, reprogramación, clase sin fecha, cancelación y, al profesor, la alerta de riesgo.
+- Con el proveedor `log` (demo) no se lee nada de Telegram: el chat se carga a mano con `telegramChatId`.
 
 Cada microservicio documenta su API con OpenAPI (springdoc). El gateway publica un Swagger UI unificado en `http://localhost:8080/swagger-ui.html`. Todos los errores usan el formato común de `climafit-commons`: `status`, `codigo`, `mensaje`, `ruta`, `correlationId` y `fecha`.
 
