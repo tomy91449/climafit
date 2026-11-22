@@ -11,14 +11,15 @@ flowchart LR
     actividades["<b>ms-actividades</b><br/>[Java 21 · Spring Boot]<br/><br/>Tipos de actividad y criterios climáticos,<br/>espacios y ejercicios"]
     clases["<b>ms-clases</b><br/>[Java 21 · Spring Boot]<br/><br/>Clases, rutinas, inscripciones, estados,<br/>historial; orquesta evaluación y reprogramación<br/>(tarea programada)"]
     clima["<b>ms-clima</b><br/>[Java 21 · Spring Boot]<br/><br/>Consulta y cachea el pronóstico;<br/>evalúa criterios: APTA / EN_RIESGO / NO_APTA<br/>(perfil demo con escenarios simulados)"]
-    notificaciones["<b>ms-notificaciones</b><br/>[Java 21 · Spring Boot]<br/><br/>Contactos y consentimiento,<br/>envío de WhatsApp con reintentos,<br/>registro de notificaciones"]
+    notificaciones["<b>ms-notificaciones</b><br/>[Java 21 · Spring Boot]<br/><br/>Contactos y consentimiento,<br/>envío por Telegram con reintentos,<br/>registro de notificaciones"]
     commons[["<b>climafit-commons</b><br/>[JAR Maven]<br/><br/>Errores, seguridad, correlation id,<br/>cliente HTTP con timeout y reintento"]]
-    db[("<b>PostgreSQL</b><br/>[DBMS · contenedor único]<br/><br/>actividades_db · clases_db<br/>notificaciones_db · keycloak_db")]
+    db[("<b>PostgreSQL</b><br/>[DBMS · contenedor postgres]<br/><br/>clases_db · notificaciones_db<br/>keycloak_db")]
+    dbActividades[("<b>PostgreSQL actividades</b><br/>[DBMS · contenedor postgres-actividades]<br/><br/>actividades_db")]
     keycloak["<b>Keycloak</b><br/>[Identity Provider · contenedor]<br/><br/>Realm climafit: usuarios, roles,<br/>clientes OIDC; emite JWT"]
   end
 
   openmeteo["<b>Open-Meteo</b><br/>[API pública externa]<br/><br/>Pronóstico horario"]
-  twilio["<b>Twilio WhatsApp API</b><br/>[Sistema externo]<br/><br/>Mensajería WhatsApp"]
+  telegram["<b>Telegram Bot API</b><br/>[Sistema externo]<br/><br/>Mensajería Telegram"]
 
   usuarios -- "Obtiene token<br/>[OIDC]" --> keycloak
   usuarios -- "Solicitudes REST + JWT<br/>[HTTPS/JSON]" --> gateway
@@ -33,13 +34,13 @@ flowchart LR
   clases -- "Solicita notificación de evento<br/>[REST + JWT, /internal]" --> notificaciones
   clases -- "Token de servicio<br/>(client credentials)" --> keycloak
 
-  actividades -- "JPA/JDBC" --> db
+  actividades -- "JPA/JDBC" --> dbActividades
   clases -- "JPA/JDBC" --> db
   notificaciones -- "JPA/JDBC" --> db
   keycloak -- "JDBC" --> db
 
   clima -- "Consulta pronóstico<br/>[HTTPS/JSON]" --> openmeteo
-  notificaciones -- "Envía mensajes<br/>[HTTPS/REST]" --> twilio
+  notificaciones -- "Envía mensajes<br/>[HTTPS/JSON]" --> telegram
 
   actividades -.->|"dependencia Maven"| commons
   clases -.->|"dependencia Maven"| commons
@@ -53,7 +54,7 @@ flowchart LR
   classDef externo fill:#999999,stroke:#6b6b6b,color:#ffffff
   class usuarios persona
   class gateway,actividades,clases,clima,notificaciones contenedor
-  class db,keycloak infra
+  class db,dbActividades,keycloak infra
   class commons libreria
-  class openmeteo,twilio externo
+  class openmeteo,telegram externo
   style sistema fill:#ffffff,stroke:#1168bd,stroke-dasharray: 5 5

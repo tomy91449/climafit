@@ -26,7 +26,6 @@ erDiagram
     varchar alumno_id "sub Keycloak"
     varchar estado "ACTIVA, CANCELADA"
     timestamp fecha_alta
-    timestamp fecha_baja
   }
   EVALUACION_CLIMATICA {
     bigint id PK
@@ -36,7 +35,7 @@ erDiagram
     varchar resultado "APTA, EN_RIESGO, NO_APTA, FALLIDA"
     varchar motivo
     int prob_lluvia
-    decimal precipitacion_mm
+    double precipitacion_mm "mm de lluvia por hora"
     int viento_kmh
     int temperatura_c
     boolean tormenta

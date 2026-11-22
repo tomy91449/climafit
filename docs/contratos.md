@@ -17,7 +17,8 @@ de la propuesta**.
 | ms-clases | 8082 | 8080 | no |
 | ms-clima | 8083 | 8080 | no |
 | ms-notificaciones | 8084 | 8080 | no |
-| PostgreSQL | — | 5432 | 5432 |
+| PostgreSQL (`postgres`: clases, notificaciones, keycloak) | — | 5432 | no (5432 en `127.0.0.1` con `docker-compose.dev.yml`) |
+| PostgreSQL (`postgres-actividades`: actividades) | — | 5432 | no (5433 en `127.0.0.1` con `docker-compose.dev.yml`) |
 
 - Dentro de Docker todos los servicios escuchan en **8080** (`SERVER_PORT` en `docker-compose.yml`).
   Las URLs entre servicios llegan por variables de entorno (`MS_ACTIVIDADES_URL`, `MS_CLIMA_URL`,
@@ -37,15 +38,16 @@ de la propuesta**.
 
 ## 3. Errores
 
-Formato único (lo arma `climafit-commons`): `status`, `codigo`, `mensaje`, `ruta`, `correlationId`, `fecha`.
+Formato único (lo arma `climafit-commons`; el gateway lo replica en `gateway.error.RespuestasError`):
+`status`, `codigo`, `mensaje`, `ruta`, `correlationId`, `fecha`.
 
 | Código | Status | Quién lo emite |
 |---|---|---|
-| `DATOS_INVALIDOS` | 400 | commons (validación) y servicios |
+| `DATOS_INVALIDOS` | 400 | commons (validación), servicios y gateway (ruta con `..` o `%2F`) |
 | `NO_AUTENTICADO` | 401 | gateway y commons, con `WWW-Authenticate: Bearer` |
-| `ACCESO_DENEGADO` | 403 | gateway y commons (RN05, RN08) |
-| `NO_ENCONTRADO` | 404 | commons (`RecursoNoEncontradoException`) |
-| `SERVICIO_NO_DISPONIBLE` | 503 | commons (cliente HTTP) y ms-clima |
+| `ACCESO_DENEGADO` | 403 | gateway (rol por ruta y método) y commons (RN05, RN08) |
+| `NO_ENCONTRADO` | 404 | commons (`RecursoNoEncontradoException`) y gateway (ruta inexistente o `/internal/**`) |
+| `SERVICIO_NO_DISPONIBLE` | 503 | commons (cliente HTTP), ms-clima y gateway (microservicio caído o sin respuesta en 60 s) |
 | `CUPO_COMPLETO` | 409 | ms-clases, RN01 |
 | `CLASE_NO_DISPONIBLE` | 409 | ms-clases, RN02 |
 | `YA_INSCRIPTO` | 409 | ms-clases, RN02 |

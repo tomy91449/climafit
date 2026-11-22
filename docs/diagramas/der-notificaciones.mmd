@@ -2,8 +2,8 @@
 erDiagram
   CONTACTO {
     varchar usuario_id PK "sub Keycloak"
-    varchar telefono "formato E.164"
-    boolean acepta_whatsapp
+    varchar telegram_chat_id "chat de Telegram (tras /start al bot)"
+    boolean acepta_telegram
     timestamp actualizado
   }
   EVENTO_NOTIFICACION {
@@ -18,11 +18,11 @@ erDiagram
     bigint id PK
     varchar evento_id FK "UK(evento_id, usuario_id)"
     varchar usuario_id
-    varchar telefono
+    varchar telegram_chat_id "chat al que se envió"
     varchar estado "PENDIENTE, ENVIADA, OMITIDA, FALLIDA"
     int intentos
     varchar ultimo_error
-    varchar id_mensaje_proveedor
+    varchar id_mensaje_proveedor "message_id de Telegram"
     timestamp fecha_envio
   }
   EVENTO_NOTIFICACION ||--|{ NOTIFICACION : "genera"

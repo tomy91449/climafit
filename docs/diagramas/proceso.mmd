@@ -16,9 +16,9 @@ flowchart TD
   M -- "No" --> M2["P6. Clase pasa a SUSPENDIDA_SIN_FECHA<br/>el profesor la reagenda (F06)"]
   M1 --> N
   M2 --> N
-  N["P7. Notificar a cada inscripto (F14)<br/>ms-notificaciones · RN15"] --> O{"¿Aceptó<br/>WhatsApp? · RN14"}
+  N["P7. Notificar a cada inscripto (F14)<br/>ms-notificaciones · RN15"] --> O{"¿Aceptó avisos y registró<br/>su chat de Telegram? · RN14"}
   O -- "No" --> O1["Notificación OMITIDA"]
-  O -- "Sí" --> P["Envío por WhatsApp<br/>con reintentos · RN16"]
+  O -- "Sí" --> P["Envío por Telegram<br/>con reintentos · RN16"]
   P --> Q["Notificación ENVIADA o FALLIDA"]
   Q --> S["P8. El alumno mantiene su lugar<br/>o cancela su inscripción (F09)"]
   S --> Z(["Fin: clase resuelta, alumnos avisados,<br/>cambios de estado en el historial (F15)"])

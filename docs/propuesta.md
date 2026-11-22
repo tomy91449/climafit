@@ -25,7 +25,7 @@ Este documento reúne las respuestas del cuestionario de propuesta del Trabajo P
 
 ClimaFit es un backend para gimnasios, grupos de entrenamiento y profesores que dan clases en espacios públicos al aire libre de Córdoba, como parques y la costanera. Este tipo de actividad es muy común en la ciudad, pero depende de un clima cada vez más imprevisible por el fenómeno de El Niño. Hoy las suspensiones se deciden a último momento y se avisan a mano, uno por uno. El resultado son alumnos que viajan a clases que no se dictan, reprogramaciones desordenadas y clases que se pierden.
 
-La solución permite administrar tipos de actividad, ejercicios (incluidos los ejercicios personalizados de cada profesor), espacios, clases e inscripciones, con acceso según el rol: administrador, profesor o alumno. Su principal aporte es un proceso automático de evaluación climática y reprogramación. Antes de cada clase al aire libre, el sistema consulta el pronóstico para ese lugar y horario y lo compara con los criterios de la actividad: probabilidad e intensidad de lluvia, viento, temperatura mínima y tormentas. No es lo mismo una clase de yoga que una de running. Con eso decide si la clase se mantiene, queda en riesgo (decide el profesor) o se suspende. Si se suspende, busca el primer día de la semana siguiente en el que el profesor esté libre y el pronóstico sea apto, pasa las inscripciones a la nueva fecha y avisa por WhatsApp a cada alumno con el motivo y la nueva fecha.
+La solución permite administrar tipos de actividad, ejercicios (incluidos los ejercicios personalizados de cada profesor), espacios, clases e inscripciones, con acceso según el rol: administrador, profesor o alumno. Su principal aporte es un proceso automático de evaluación climática y reprogramación. Antes de cada clase al aire libre, el sistema consulta el pronóstico para ese lugar y horario y lo compara con los criterios de la actividad: probabilidad e intensidad de lluvia, viento, temperatura mínima y tormentas. No es lo mismo una clase de yoga que una de running. Con eso decide si la clase se mantiene, queda en riesgo (decide el profesor) o se suspende. Si se suspende, busca el primer día de la semana siguiente en el que el profesor esté libre y el pronóstico sea apto, pasa las inscripciones a la nueva fecha y avisa por Telegram a cada alumno con el motivo y la nueva fecha.
 
 El resultado concreto es que una clase afectada por el clima se suspende, se reprograma y se comunica sin intervención manual. Cada alumno sabe a tiempo si tiene que ir y cuándo, y el profesor cuenta con el historial de cambios de estado de cada clase.
 
@@ -52,9 +52,9 @@ El resultado concreto es que una clase afectada por el clima se suspende, se rep
 - **Profesor:** crea y dicta las clases, arma las rutinas y decide en los casos dudosos.
 - **Alumno:** se inscribe, asiste y recibe los avisos.
 - **Servicio de pronóstico meteorológico:** fuente externa de información del clima.
-- **Servicio de mensajería WhatsApp:** el canal por el que los alumnos ya se comunican con sus profesores.
+- **Servicio de mensajería Telegram:** un canal de mensajería masivo, con una API de bots gratuita y abierta, por el que los alumnos reciben los avisos en el celular.
 
-**Por qué resolverlo con el sistema propuesto.** El problema no es la falta de información: el pronóstico está disponible para cualquiera. El problema es que nadie lo cruza a tiempo con los datos de cada clase (dónde es, a qué hora, qué actividad y quiénes están inscriptos) usando un criterio claro, y que nadie actúa en consecuencia. Ese cruce es un proceso que se repite para cada clase y sigue reglas que se pueden definir de antemano, así que se puede automatizar. Un backend puede reunir la agenda, las inscripciones, los criterios de cada actividad, el pronóstico y el canal de aviso, cosas que hoy están separadas. Con eso puede decidir de forma consistente, proponer una nueva fecha que cumpla todas las condiciones y avisar a todos los afectados con anticipación. Ni el pronóstico ni WhatsApp pueden hacer esto por separado: el valor está en coordinarlos con las reglas propias del dominio.
+**Por qué resolverlo con el sistema propuesto.** El problema no es la falta de información: el pronóstico está disponible para cualquiera. El problema es que nadie lo cruza a tiempo con los datos de cada clase (dónde es, a qué hora, qué actividad y quiénes están inscriptos) usando un criterio claro, y que nadie actúa en consecuencia. Ese cruce es un proceso que se repite para cada clase y sigue reglas que se pueden definir de antemano, así que se puede automatizar. Un backend puede reunir la agenda, las inscripciones, los criterios de cada actividad, el pronóstico y el canal de aviso, cosas que hoy están separadas. Con eso puede decidir de forma consistente, proponer una nueva fecha que cumpla todas las condiciones y avisar a todos los afectados con anticipación. Ni el pronóstico ni la mensajería pueden hacer esto por separado: el valor está en coordinarlos con las reglas propias del dominio.
 
 ---
 
@@ -120,7 +120,7 @@ Prioridad: **Alta** = imprescindible para el proceso central. **Media** = comple
 
 **F10 — Preferencias de contacto**
 - Actor: alumno o profesor.
-- Comportamiento: registrar el teléfono y aceptar o rechazar los avisos por WhatsApp.
+- Comportamiento: registrar el chat de Telegram y aceptar o rechazar los avisos por Telegram.
 - Resultado observable: la preferencia queda guardada.
 - Prioridad: Alta.
 
@@ -142,7 +142,7 @@ Prioridad: **Alta** = imprescindible para el proceso central. **Media** = comple
 - Resultado observable: la clase queda REPROGRAMADA o SUSPENDIDA_SIN_FECHA.
 - Prioridad: Alta.
 
-**F14 — Notificación por WhatsApp**
+**F14 — Notificación por Telegram**
 - Actor: sistema.
 - Comportamiento: avisar a cada inscripto cuando la clase se suspende, se reprograma o se cancela, y avisar al profesor cuando su clase queda en riesgo.
 - Resultado observable: cada notificación queda ENVIADA, OMITIDA o FALLIDA.
@@ -160,7 +160,7 @@ Prioridad: **Alta** = imprescindible para el proceso central. **Media** = comple
 - Control de asistencia.
 - Lista de espera.
 - Confirmación de asistencia a la clase reprogramada.
-- Respuestas del alumno por WhatsApp.
+- Respuestas del alumno por Telegram.
 - Notificaciones por email o push.
 - Reserva o capacidad de los espacios.
 - Gestión de varios gimnasios separados (multi-tenant).
@@ -232,7 +232,7 @@ Prioridad: **Alta** = imprescindible para el proceso central. **Media** = comple
 
 **RN11 — Decisión según el resultado**
 - Condición: termina la evaluación de una clase.
-- Comportamiento: si el resultado es NO_APTA, la clase se suspende automáticamente y empieza la reprogramación. Si es EN_RIESGO, la clase pasa a ese estado y se envía una alerta por WhatsApp al profesor. Si es APTA, no cambia nada.
+- Comportamiento: si el resultado es NO_APTA, la clase se suspende automáticamente y empieza la reprogramación. Si es EN_RIESGO, la clase pasa a ese estado y se envía una alerta por Telegram al profesor. Si es APTA, no cambia nada.
 - Funcionalidades: F11, F12, F13, F14.
 
 **RN12 — Clase en riesgo**
@@ -246,9 +246,9 @@ Prioridad: **Alta** = imprescindible para el proceso central. **Media** = comple
 - Comportamiento: se prueba el mismo horario en cada uno de los 7 días siguientes. Se elige el primer día en el que el profesor está libre (RN04) y el pronóstico es APTA (RN10). Las inscripciones activas pasan a la nueva fecha. Si no hay ningún día viable, la clase pasa a SUSPENDIDA_SIN_FECHA y el profesor la reagenda manualmente (F06).
 - Funcionalidad: F13.
 
-**RN14 — Consentimiento para WhatsApp**
+**RN14 — Consentimiento para Telegram**
 - Condición: se envía una notificación.
-- Comportamiento: solo se envía si el destinatario aceptó recibir avisos y tiene teléfono registrado. Si no, la notificación queda OMITIDA.
+- Comportamiento: solo se envía si el destinatario aceptó recibir avisos y tiene su chat de Telegram registrado. Si no, la notificación queda OMITIDA.
 - Funcionalidades: F10, F14.
 
 **RN15 — Notificación única por evento**
@@ -261,7 +261,7 @@ Prioridad: **Alta** = imprescindible para el proceso central. **Media** = comple
 - Condición: un servicio que participa del proceso falla o no responde a tiempo.
 - Comportamiento:
   - Si fallan ms-clima, Open-Meteo o ms-actividades durante la evaluación, la clase no cambia de estado, la evaluación queda FALLIDA y se reintenta en la próxima ejecución.
-  - Si falla WhatsApp, se reintenta hasta 3 veces con espera creciente y después la notificación queda FALLIDA, sin revertir el cambio de la clase.
+  - Si falla Telegram, se reintenta hasta 3 veces con espera creciente y después la notificación queda FALLIDA, sin revertir el cambio de la clase.
   - Si ms-notificaciones no responde, el cambio de estado queda marcado como pendiente de notificar y la tarea programada lo reenvía con el mismo identificador de evento (RN15).
 - Funcionalidades: F11, F14.
 
@@ -273,7 +273,7 @@ Prioridad: **Alta** = imprescindible para el proceso central. **Media** = comple
   - EN_RIESGO vuelve a su estado anterior si el profesor la mantiene, o pasa a SUSPENDIDA si la suspende (RN12).
   - SUSPENDIDA pasa a REPROGRAMADA si hay día viable, o a SUSPENDIDA_SIN_FECHA si no lo hay (RN13).
   - SUSPENDIDA_SIN_FECHA pasa a REPROGRAMADA cuando el profesor la reagenda.
-  - PROGRAMADA pasa a REPROGRAMADA si el profesor cambia la fecha.
+  - PROGRAMADA o REPROGRAMADA pasan a REPROGRAMADA si el profesor cambia la fecha.
   - Cualquier clase que todavía no empezó puede pasar a CANCELADA.
   - Una vez pasada su hora de inicio, la clase ya no admite cambios (RN06).
 - **Inscripción:** ACTIVA o CANCELADA.
@@ -284,7 +284,7 @@ Prioridad: **Alta** = imprescindible para el proceso central. **Media** = comple
 
 **Evento inicial:** una tarea programada en ms-clases que se ejecuta cada 3 horas, o la evaluación manual que pide un profesor o el administrador (F11).
 
-**Participantes:** ms-clases (orquesta el proceso), ms-actividades, ms-clima, ms-notificaciones, el profesor, los alumnos inscriptos y los servicios externos Open-Meteo y Twilio WhatsApp.
+**Participantes:** ms-clases (orquesta el proceso), ms-actividades, ms-clima, ms-notificaciones, el profesor, los alumnos inscriptos y los servicios externos Open-Meteo y Telegram Bot API.
 
 **Pasos:**
 - **P1.** Se seleccionan las clases al aire libre que empiezan dentro de las próximas 24 horas. Relación: F11, RN09.
@@ -293,15 +293,15 @@ Prioridad: **Alta** = imprescindible para el proceso central. **Media** = comple
 - **P4.** Se decide según el resultado. Si es APTA, la clase se mantiene. Si es EN_RIESGO, la clase pasa a ese estado, se alerta al profesor y él decide. Si es NO_APTA, la clase se suspende. Relación: F11, F12, F14, RN05, RN11, RN12.
 - **P5.** La clase pasa a SUSPENDIDA y se busca un nuevo día: el mismo horario en los 7 días siguientes, con el profesor libre y pronóstico APTA. ms-clima evalúa todos los días candidatos en una sola llamada. Relación: F13, RN04, RN13.
 - **P6.** Si se encuentra un día, la clase pasa a REPROGRAMADA y las inscripciones pasan a la nueva fecha. Si no, pasa a SUSPENDIDA_SIN_FECHA. Cada cambio queda en el historial. Relación: F13, F15, F06.
-- **P7.** ms-clases le pide a ms-notificaciones que avise del evento a cada inscripto. ms-notificaciones registra el evento, responde de inmediato y envía los mensajes por WhatsApp en segundo plano. Relación: F14, RN14, RN15, RN16.
+- **P7.** ms-clases le pide a ms-notificaciones que avise del evento a cada inscripto. ms-notificaciones registra el evento, responde de inmediato y envía los mensajes por Telegram en segundo plano. Relación: F14, RN14, RN15, RN16.
 - **P8.** El alumno mantiene su lugar en la nueva fecha o cancela su inscripción. Relación: F09, RN02.
 
 **Excepciones relevantes:**
 - Si el clima o el catálogo no responden, la evaluación queda FALLIDA, la clase no cambia y se reintenta (RN16).
 - Si no hay día viable, la clase queda SUSPENDIDA_SIN_FECHA y el profesor la reagenda (RN13, F06).
-- Si falla WhatsApp, se reintenta y después la notificación queda FALLIDA, sin revertir la suspensión (RN16).
+- Si falla Telegram, se reintenta y después la notificación queda FALLIDA, sin revertir la suspensión (RN16).
 - Si ms-notificaciones no responde, el aviso queda pendiente y se reenvía sin duplicar (RN15, RN16).
-- Si el alumno no aceptó WhatsApp, la notificación queda OMITIDA (RN14).
+- Si el alumno no aceptó avisos por Telegram, la notificación queda OMITIDA (RN14).
 
 **Resultado final:** la clase queda en un estado coherente con el pronóstico (mantenida, reprogramada, sin fecha o cancelada), los alumnos y el profesor quedan avisados y cada cambio de estado queda registrado en el historial (F15).
 
@@ -328,9 +328,9 @@ flowchart TD
   M -- "No" --> M2["P6. Clase pasa a SUSPENDIDA_SIN_FECHA<br/>el profesor la reagenda (F06)"]
   M1 --> N
   M2 --> N
-  N["P7. Notificar a cada inscripto (F14)<br/>ms-notificaciones · RN15"] --> O{"¿Aceptó<br/>WhatsApp? · RN14"}
+  N["P7. Notificar a cada inscripto (F14)<br/>ms-notificaciones · RN15"] --> O{"¿Aceptó avisos y registró<br/>su chat de Telegram? · RN14"}
   O -- "No" --> O1["Notificación OMITIDA"]
-  O -- "Sí" --> P["Envío por WhatsApp<br/>con reintentos · RN16"]
+  O -- "Sí" --> P["Envío por Telegram<br/>con reintentos · RN16"]
   P --> Q["Notificación ENVIADA o FALLIDA"]
   Q --> S["P8. El alumno mantiene su lugar<br/>o cancela su inscripción (F09)"]
   S --> Z(["Fin: clase resuelta, alumnos avisados,<br/>cambios de estado en el historial (F15)"])
@@ -349,24 +349,27 @@ stateDiagram-v2
   [*] --> PROGRAMADA: Creación (F05)
   PROGRAMADA --> EN_RIESGO: EN_RIESGO (RN11)
   REPROGRAMADA --> EN_RIESGO: EN_RIESGO (RN11)
-  EN_RIESGO --> PROGRAMADA: Mantener (RN12)
+  EN_RIESGO --> PROGRAMADA: Mantener, si venía de PROGRAMADA (RN12)
+  EN_RIESGO --> REPROGRAMADA: Mantener, si venía de REPROGRAMADA (RN12)
   EN_RIESGO --> SUSPENDIDA: Suspender (F12)
   PROGRAMADA --> SUSPENDIDA: NO_APTA (RN11)
   REPROGRAMADA --> SUSPENDIDA: NO_APTA (RN11)
   PROGRAMADA --> REPROGRAMADA: Cambio de fecha (F06)
+  REPROGRAMADA --> REPROGRAMADA: Otro cambio de fecha (F06)
   SUSPENDIDA --> REPROGRAMADA: Día viable (RN13)
   SUSPENDIDA --> SUSPENDIDA_SIN_FECHA: Sin día viable (RN13)
   SUSPENDIDA_SIN_FECHA --> REPROGRAMADA: Reagenda (F06)
   PROGRAMADA --> CANCELADA: Cancelación (F07)
   REPROGRAMADA --> CANCELADA: Cancelación (F07)
   EN_RIESGO --> CANCELADA: Cancelación (F07)
+  SUSPENDIDA --> CANCELADA: Cancelación (F07)
   SUSPENDIDA_SIN_FECHA --> CANCELADA: Cancelación (F07)
   PROGRAMADA --> [*]: Se dicta
   REPROGRAMADA --> [*]: Se dicta
   CANCELADA --> [*]
 ```
 
-**Explicación.** El diagrama de actividades muestra el proceso de principio a fin. Los rombos son las decisiones y cada paso está rotulado con las funcionalidades y reglas que intervienen. El diagrama de estados muestra el ciclo de vida de la clase, que es la entidad central del proceso, y asocia cada transición con la regla o funcionalidad que la provoca. Cuando una clase EN_RIESGO se mantiene, vuelve a su estado anterior (PROGRAMADA o REPROGRAMADA). En el diagrama esa transición se dibuja hacia PROGRAMADA para simplificarlo.
+**Explicación.** El diagrama de actividades muestra el proceso de principio a fin. Los rombos son las decisiones y cada paso está rotulado con las funcionalidades y reglas que intervienen. El diagrama de estados muestra el ciclo de vida de la clase, que es la entidad central del proceso, y asocia cada transición con la regla o funcionalidad que la provoca. Cuando una clase EN_RIESGO se mantiene, vuelve a su estado anterior (PROGRAMADA o REPROGRAMADA), y el diagrama muestra los dos casos.
 
 ---
 
@@ -380,7 +383,7 @@ Definición editable (`docs/diagramas/c4-contexto.mmd`, Mermaid con la convenci�
 %% C1 - Diagrama de Contexto (C4) - ClimaFit
 flowchart LR
   subgraph usuarios["Usuarios de ClimaFit"]
-  alumno["<b>Alumno</b><br/>[Persona]<br/><br/>Consulta clases, se inscribe<br/>y recibe avisos por WhatsApp"]
+  alumno["<b>Alumno</b><br/>[Persona]<br/><br/>Consulta clases, se inscribe<br/>y recibe avisos por Telegram"]
   profesor["<b>Profesor</b><br/>[Persona]<br/><br/>Crea clases y rutinas;<br/>decide sobre clases en riesgo"]
   admin["<b>Administrador</b><br/>[Persona]<br/><br/>Gestiona actividades,<br/>criterios climáticos y espacios"]
   end
@@ -389,42 +392,43 @@ flowchart LR
 
   keycloak["<b>Keycloak</b><br/>[Sistema externo - Identity Provider]<br/><br/>Autenticación OIDC,<br/>emisión de JWT y roles"]
   openmeteo["<b>Open-Meteo</b><br/>[Sistema externo - API pública]<br/><br/>Pronóstico horario por coordenadas"]
-  twilio["<b>Twilio WhatsApp API</b><br/>[Sistema externo]<br/><br/>Envío de mensajes de WhatsApp"]
+  telegram["<b>Telegram Bot API</b><br/>[Sistema externo]<br/><br/>Envío de mensajes de Telegram"]
 
   usuarios -- "Se autentican y obtienen JWT<br/>[OIDC]" --> keycloak
   profesor -- "Gestiona clases y decide<br/>[HTTPS/JSON + JWT]" --> climafit
   admin -- "Administra catálogo<br/>[HTTPS/JSON + JWT]" --> climafit
   alumno -- "Consulta clases e inscribe<br/>[HTTPS/JSON + JWT]" --> climafit
-  climafit -- "Solicita envío de avisos<br/>[HTTPS/REST]" --> twilio
+  climafit -- "Solicita envío de avisos<br/>[HTTPS/JSON]" --> telegram
   climafit -- "Valida JWT y obtiene<br/>token de servicio [OIDC]" --> keycloak
   climafit -- "Consulta pronóstico<br/>[HTTPS/JSON]" --> openmeteo
-  twilio -. "Entrega mensajes<br/>[WhatsApp]" .-> alumno
+  telegram -. "Entrega avisos<br/>[Telegram]" .-> alumno
+  telegram -. "Entrega alertas de riesgo<br/>[Telegram]" .-> profesor
 
   classDef persona fill:#08427b,stroke:#052e56,color:#ffffff
   classDef sistema fill:#1168bd,stroke:#0b4884,color:#ffffff
   classDef externo fill:#999999,stroke:#6b6b6b,color:#ffffff
   class alumno,profesor,admin persona
   class climafit sistema
-  class keycloak,openmeteo,twilio externo
+  class keycloak,openmeteo,telegram externo
   style usuarios fill:#ffffff,stroke:#08427b,stroke-dasharray: 5 5
 ```
 
 **Elementos**
-- **Alumno (persona):** consulta clases, se inscribe o cancela, registra su teléfono y recibe los avisos por WhatsApp.
+- **Alumno (persona):** consulta clases, se inscribe o cancela, registra su chat de Telegram y recibe los avisos por Telegram.
 - **Profesor (persona):** crea y modifica clases y rutinas, crea ejercicios propios, decide sobre clases en riesgo, reagenda clases sin fecha y consulta el historial y las notificaciones de sus clases.
 - **Administrador (persona):** gestiona tipos de actividad con sus criterios climáticos, espacios y ejercicios base, y puede ejecutar la evaluación general.
 - **ClimaFit Backend (sistema a desarrollar):** gestiona clases al aire libre y ejecuta el proceso de evaluación climática, suspensión, reprogramación y notificación.
 - **Keycloak (sistema externo, Identity Provider):** autentica a los usuarios con OIDC, emite JWT con los roles ADMIN, PROFESOR y ALUMNO, y emite el token de servicio que usan los microservicios entre sí. Se despliega en el mismo Docker Compose, pero en el contexto es un sistema que el equipo no desarrolla.
 - **Open-Meteo (API pública externa):** pronóstico horario por coordenadas (probabilidad de lluvia, precipitación en mm, viento, temperatura y código de tiempo). Es la información que define si una clase se suspende. No requiere API key.
-- **Twilio WhatsApp API (sistema externo):** envía los mensajes de WhatsApp a alumnos y profesores.
+- **Telegram Bot API (sistema externo):** envía los mensajes de Telegram a alumnos y profesores.
 
 **Relaciones**
 - Usuarios → Keycloak: se autentican y obtienen un JWT (OIDC).
 - Alumno, Profesor y Administrador → ClimaFit: solicitudes REST/JSON con el JWT, según su rol.
 - ClimaFit → Keycloak: valida los tokens (claves públicas JWKS) y obtiene un token de servicio con client credentials.
 - ClimaFit → Open-Meteo: consulta el pronóstico de las coordenadas del espacio para las horas de la clase y para los días candidatos.
-- ClimaFit → Twilio: solicita el envío de cada aviso.
-- Twilio → Alumno: entrega el mensaje de WhatsApp.
+- ClimaFit → Telegram: solicita el envío de cada aviso.
+- Telegram → Alumno y Profesor: entrega el aviso (al profesor, las alertas de riesgo).
 
 ---
 
@@ -448,14 +452,15 @@ flowchart LR
     actividades["<b>ms-actividades</b><br/>[Java 21 · Spring Boot]<br/><br/>Tipos de actividad y criterios climáticos,<br/>espacios y ejercicios"]
     clases["<b>ms-clases</b><br/>[Java 21 · Spring Boot]<br/><br/>Clases, rutinas, inscripciones, estados,<br/>historial; orquesta evaluación y reprogramación<br/>(tarea programada)"]
     clima["<b>ms-clima</b><br/>[Java 21 · Spring Boot]<br/><br/>Consulta y cachea el pronóstico;<br/>evalúa criterios: APTA / EN_RIESGO / NO_APTA<br/>(perfil demo con escenarios simulados)"]
-    notificaciones["<b>ms-notificaciones</b><br/>[Java 21 · Spring Boot]<br/><br/>Contactos y consentimiento,<br/>envío de WhatsApp con reintentos,<br/>registro de notificaciones"]
+    notificaciones["<b>ms-notificaciones</b><br/>[Java 21 · Spring Boot]<br/><br/>Contactos y consentimiento,<br/>envío por Telegram con reintentos,<br/>registro de notificaciones"]
     commons[["<b>climafit-commons</b><br/>[JAR Maven]<br/><br/>Errores, seguridad, correlation id,<br/>cliente HTTP con timeout y reintento"]]
-    db[("<b>PostgreSQL</b><br/>[DBMS · contenedor único]<br/><br/>actividades_db · clases_db<br/>notificaciones_db · keycloak_db")]
+    db[("<b>PostgreSQL</b><br/>[DBMS · contenedor postgres]<br/><br/>clases_db · notificaciones_db<br/>keycloak_db")]
+    dbActividades[("<b>PostgreSQL actividades</b><br/>[DBMS · contenedor postgres-actividades]<br/><br/>actividades_db")]
     keycloak["<b>Keycloak</b><br/>[Identity Provider · contenedor]<br/><br/>Realm climafit: usuarios, roles,<br/>clientes OIDC; emite JWT"]
   end
 
   openmeteo["<b>Open-Meteo</b><br/>[API pública externa]<br/><br/>Pronóstico horario"]
-  twilio["<b>Twilio WhatsApp API</b><br/>[Sistema externo]<br/><br/>Mensajería WhatsApp"]
+  telegram["<b>Telegram Bot API</b><br/>[Sistema externo]<br/><br/>Mensajería Telegram"]
 
   usuarios -- "Obtiene token<br/>[OIDC]" --> keycloak
   usuarios -- "Solicitudes REST + JWT<br/>[HTTPS/JSON]" --> gateway
@@ -470,13 +475,13 @@ flowchart LR
   clases -- "Solicita notificación de evento<br/>[REST + JWT, /internal]" --> notificaciones
   clases -- "Token de servicio<br/>(client credentials)" --> keycloak
 
-  actividades -- "JPA/JDBC" --> db
+  actividades -- "JPA/JDBC" --> dbActividades
   clases -- "JPA/JDBC" --> db
   notificaciones -- "JPA/JDBC" --> db
   keycloak -- "JDBC" --> db
 
   clima -- "Consulta pronóstico<br/>[HTTPS/JSON]" --> openmeteo
-  notificaciones -- "Envía mensajes<br/>[HTTPS/REST]" --> twilio
+  notificaciones -- "Envía mensajes<br/>[HTTPS/JSON]" --> telegram
 
   actividades -.->|"dependencia Maven"| commons
   clases -.->|"dependencia Maven"| commons
@@ -490,9 +495,9 @@ flowchart LR
   classDef externo fill:#999999,stroke:#6b6b6b,color:#ffffff
   class usuarios persona
   class gateway,actividades,clases,clima,notificaciones contenedor
-  class db,keycloak infra
+  class db,dbActividades,keycloak infra
   class commons libreria
-  class openmeteo,twilio externo
+  class openmeteo,telegram externo
   style sistema fill:#ffffff,stroke:#1168bd,stroke-dasharray: 5 5
 ```
 
@@ -524,17 +529,18 @@ flowchart LR
 **ms-notificaciones** — Java 21, Spring Boot, Spring Data JPA, `@Async`
 - Contactos y consentimiento.
 - Recibe eventos de ms-clases, los registra y responde 202.
-- Envía los mensajes por WhatsApp en segundo plano, con reintentos e idempotencia (RN14, RN15, RN16).
-- El proveedor es configurable: `twilio`, o `log` para demo, que registra el mensaje sin enviarlo.
+- Envía los mensajes por Telegram en segundo plano, con reintentos e idempotencia (RN14, RN15, RN16).
+- El proveedor es configurable: `bot` (Telegram Bot API), o `log` para demo, que registra el mensaje sin enviarlo.
 - Base: `notificaciones_db`.
 
 **climafit-commons** — JAR Maven
 - Librería propia usada por los cuatro microservicios: errores, seguridad, correlation id y cliente HTTP (ver Sección 09).
 - No es un contenedor en ejecución: es una dependencia empaquetada dentro de cada servicio.
 
-**PostgreSQL** — PostgreSQL 17, un solo contenedor
-- Una base de datos y un usuario por microservicio (`actividades_db`, `clases_db`, `notificaciones_db`) y `keycloak_db` para Keycloak.
-- Un servicio no puede acceder a la base de otro.
+**PostgreSQL** — PostgreSQL 17, dos contenedores
+- `postgres`: `clases_db`, `notificaciones_db` y `keycloak_db` (Keycloak).
+- `postgres-actividades`: `actividades_db`, en un contenedor aparte. El catálogo no comparte instancia con el resto.
+- En los dos, una base y un usuario por componente. Cada usuario es dueño solo de su base y no es superusuario, así que un servicio no puede acceder a la base de otro.
 
 **Keycloak** — Keycloak 26
 - Realm `climafit` importado al arrancar: roles ADMIN, PROFESOR, ALUMNO y SERVICIO, usuarios de prueba, el cliente público `climafit-api` y el cliente confidencial `climafit-servicios` (service account con rol SERVICIO).
@@ -552,8 +558,8 @@ flowchart LR
 - ms-clases → ms-clima: REST sincrónico `/internal/evaluaciones`, con una o varias ventanas horarias por llamada.
 - ms-clases → ms-notificaciones: REST `/internal/notificaciones`; la respuesta es inmediata (202) y el envío es asincrónico.
 - ms-clases → Keycloak: token de servicio (client credentials). Todas las llamadas entre servicios usan ese token y los endpoints `/internal/**` exigen el rol SERVICIO.
-- ms-clima → Open-Meteo y ms-notificaciones → Twilio: HTTPS hacia Internet.
-- ms-actividades, ms-clases, ms-notificaciones y Keycloak → PostgreSQL: JDBC, cada uno contra su propia base.
+- ms-clima → Open-Meteo y ms-notificaciones → Telegram: HTTPS hacia Internet.
+- ms-actividades → PostgreSQL actividades (`postgres-actividades`), y ms-clases, ms-notificaciones y Keycloak → PostgreSQL (`postgres`): JDBC, cada uno contra su propia base.
 - Todas las llamadas entre servicios usan el cliente HTTP de `climafit-commons`, con timeout de conexión de 2 s, timeout de lectura de 5 s y hasta 2 reintentos en operaciones de lectura. Si el servicio no responde, se devuelve 503 `SERVICIO_NO_DISPONIBLE` o se aplica RN16 dentro del proceso.
 
 ---
@@ -621,7 +627,7 @@ Abreviaturas de la columna Seguridad:
 
 | Microservicio | Recurso | Método HTTP | Endpoint | Operación de negocio | Seguridad |
 |---|---|---|---|---|---|
-| ms-notificaciones | Contactos | PUT | /contactos/mio | Registrar teléfono y consentimiento para avisos por WhatsApp | Autenticado |
+| ms-notificaciones | Contactos | PUT | /contactos/mio | Registrar el chat de Telegram y el consentimiento para avisos | Autenticado |
 | ms-notificaciones | Contactos | GET | /contactos/mio | Consultar las preferencias de contacto propias | Autenticado |
 | ms-notificaciones | Notificaciones | GET | /notificaciones?claseId= | Consultar las notificaciones generadas para una clase y su estado | PROFESOR (de esa clase) / ADMIN |
 | ms-notificaciones | Notificaciones | POST | /internal/notificaciones | Registrar un evento de clase y programar el envío a cada destinatario (RN14, RN15) | Servicio (no expuesto en el gateway) |
@@ -633,7 +639,11 @@ Cada microservicio documenta su API con OpenAPI (springdoc). El gateway publica 
 ## Sección 08 — Arquitectura: Persistencia
 
 **Estrategia.**
-- Hay un solo contenedor PostgreSQL 17 con **una base de datos por microservicio** y un usuario propio para cada una. Cada servicio solo tiene permisos sobre su base, así que el aislamiento de datos se mantiene sin multiplicar contenedores.
+- Hay **una base de datos por microservicio**, cada una con un usuario propio, repartidas en dos contenedores PostgreSQL 17:
+  - `postgres-actividades` tiene solo `actividades_db`;
+  - `postgres` tiene `clases_db`, `notificaciones_db` y `keycloak_db`.
+
+  Cada servicio solo tiene permisos sobre su base: el usuario es dueño de ella y no es superusuario. Así el aislamiento de datos se mantiene también entre las bases que comparten contenedor.
 - Entre servicios no hay claves foráneas: las referencias son lógicas, por id (por ejemplo, `clase.tipo_actividad_id`) o por el `sub` de Keycloak para usuarios.
 - El esquema y los datos iniciales se crean con migraciones Flyway versionadas, de modo que la solución arranca igual desde un entorno limpio.
 - Las fechas se guardan en hora de Córdoba (`America/Argentina/Cordoba`), la misma zona que se le pide a Open-Meteo.
@@ -719,7 +729,6 @@ erDiagram
     varchar alumno_id "sub Keycloak"
     varchar estado "ACTIVA, CANCELADA"
     timestamp fecha_alta
-    timestamp fecha_baja
   }
   EVALUACION_CLIMATICA {
     bigint id PK
@@ -729,7 +738,7 @@ erDiagram
     varchar resultado "APTA, EN_RIESGO, NO_APTA, FALLIDA"
     varchar motivo
     int prob_lluvia
-    decimal precipitacion_mm
+    double precipitacion_mm "mm de lluvia por hora"
     int viento_kmh
     int temperatura_c
     boolean tormenta
@@ -768,8 +777,8 @@ erDiagram
 erDiagram
   CONTACTO {
     varchar usuario_id PK "sub Keycloak"
-    varchar telefono "formato E.164"
-    boolean acepta_whatsapp
+    varchar telegram_chat_id "chat de Telegram (tras /start al bot)"
+    boolean acepta_telegram
     timestamp actualizado
   }
   EVENTO_NOTIFICACION {
@@ -784,18 +793,18 @@ erDiagram
     bigint id PK
     varchar evento_id FK "UK(evento_id, usuario_id)"
     varchar usuario_id
-    varchar telefono
+    varchar telegram_chat_id "chat al que se envió"
     varchar estado "PENDIENTE, ENVIADA, OMITIDA, FALLIDA"
     int intentos
     varchar ultimo_error
-    varchar id_mensaje_proveedor
+    varchar id_mensaje_proveedor "message_id de Telegram"
     timestamp fecha_envio
   }
   EVENTO_NOTIFICACION ||--|{ NOTIFICACION : "genera"
   CONTACTO |o--o{ NOTIFICACION : "destinatario"
 ```
 
-- CONTACTO guarda el teléfono y el consentimiento de cada usuario (RN14).
+- CONTACTO guarda el chat de Telegram y el consentimiento de cada usuario (RN14).
 - EVENTO_NOTIFICACION registra cada evento recibido de ms-clases.
 - NOTIFICACION tiene una fila por destinatario, con estado, intentos y último error. La restricción única (evento, usuario) implementa RN15.
 - Un destinatario sin contacto registrado genera igual su notificación, que queda OMITIDA. Por eso la relación con CONTACTO es opcional.
@@ -803,7 +812,7 @@ erDiagram
 ### ms-clima y Keycloak
 
 - **ms-clima** no tiene base de datos. Mantiene el pronóstico en una caché en memoria (Caffeine, 30 minutos por coordenada y día) y los escenarios simulados en memoria. La decisión es deliberada: el pronóstico se puede volver a consultar, y lo que tiene valor de negocio, la evaluación, se guarda en ms-clases junto a la clase.
-- **Keycloak** usa su propia base `keycloak_db` en la misma instancia de PostgreSQL.
+- **Keycloak** usa su propia base `keycloak_db`, en el contenedor `postgres` (junto a `clases_db` y `notificaciones_db`).
 
 ---
 
@@ -843,7 +852,7 @@ erDiagram
   - Entidades, repositorios y DTOs de cada API. Compartirlos acoplaría los servicios: cada consumidor define su propio DTO con los campos que usa.
   - Reglas de negocio y máquina de estados (ms-clases).
   - Lógica de evaluación climática (ms-clima).
-  - Clientes de Open-Meteo y Twilio (cada uno pertenece a un único servicio).
+  - Clientes de Open-Meteo y Telegram (cada uno pertenece a un único servicio).
   - Reglas de autorización específicas de cada endpoint y los códigos de error propios de cada dominio (`CUPO_COMPLETO` vive en ms-clases; la librería solo aporta la clase base).
 
 ---
@@ -864,7 +873,7 @@ erDiagram
 - **SERVICIO** (solo service account): accede a los endpoints `/internal/**` y a las lecturas del catálogo.
 
 **Recursos protegidos y trusted zone.**
-- Solo se publican al host el API Gateway (8080) y Keycloak (8090). Los microservicios y PostgreSQL quedan en la red interna de Docker.
+- Solo se publican al host el API Gateway (8080) y Keycloak (8090). Los microservicios y los dos contenedores de PostgreSQL quedan en la red interna de Docker. Las bases no tienen puerto publicado. Para programar desde el IDE, `docker-compose.dev.yml` publica 5432 y 5433 solo en `127.0.0.1`.
 - **Gateway (Security Filter, Spring Security WebFlux):**
   - Valida firma, vencimiento y emisor del JWT.
   - Rechaza las solicitudes sin token o con token inválido (401).
@@ -897,27 +906,27 @@ erDiagram
 - **Spring:** Spring Boot 3.5.x, Spring Cloud 2025.0.x (Spring Cloud Gateway), Spring Security con OAuth2 Resource Server y OAuth2 Client, Spring Data JPA.
 - **Bibliotecas:** springdoc-openapi 2.8.x, Flyway, Caffeine, Bean Validation.
 - **Infraestructura:** PostgreSQL 17, Keycloak 26.x, Docker y Docker Compose v2.
-- **Servicios externos:** Open-Meteo Forecast API (sin API key) y Twilio Programmable Messaging para WhatsApp (sandbox), ambos consumidos con `RestClient`, sin SDK.
+- **Servicios externos:** Open-Meteo Forecast API (sin API key) y Telegram Bot API (`sendMessage`), ambos consumidos con `RestClient`, sin SDK.
 
-**Dependencias de infraestructura:** PostgreSQL (bases de cada servicio y de Keycloak) y Keycloak (realm importado al arrancar). Para el modo REAL se necesita acceso a Internet hacia Open-Meteo, y opcionalmente hacia Twilio.
+**Dependencias de infraestructura:** PostgreSQL (bases de cada servicio y de Keycloak) y Keycloak (realm importado al arrancar). Para el modo REAL se necesita acceso a Internet hacia Open-Meteo, y opcionalmente hacia Telegram.
 
 **Configuración por entorno.**
-- Cada servicio tiene `application.yml` con valores por defecto y los perfiles `local` (ejecución desde el IDE contra los contenedores de infraestructura), `docker` (dentro de Compose) y `demo` (habilita los modos y escenarios de ms-clima y usa el proveedor `log` de WhatsApp).
+- Cada servicio tiene `application.yml` con valores por defecto y los perfiles `local` (ejecución desde el IDE contra los contenedores de infraestructura), `docker` (dentro de Compose) y `demo` (habilita los modos y escenarios de ms-clima y usa el proveedor `log` de Telegram).
 - Los secretos y valores que cambian según el entorno se pasan por variables definidas en `.env`, a partir de `.env.example`, que se versiona sin valores reales:
   - `POSTGRES_PASSWORD`;
   - contraseñas de cada base;
   - `KEYCLOAK_ADMIN` y `KEYCLOAK_ADMIN_PASSWORD`;
   - `CLIENTE_SERVICIOS_SECRET`;
   - `SPRING_PROFILES_ACTIVE` (`docker,demo`);
-  - `WHATSAPP_PROVEEDOR` (`log` o `twilio`);
-  - `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` y `TWILIO_FROM`;
+  - `TELEGRAM_PROVEEDOR` (`log` o `bot`);
+  - `TELEGRAM_BOT_TOKEN` (token del bot, lo entrega @BotFather);
   - `TZ=America/Argentina/Cordoba`.
 - Ningún secreto queda en el código.
 
 **Archivos que permiten ejecutar la solución.**
-- `docker-compose.yml`: define `postgres`, `keycloak`, `ms-actividades`, `ms-clases`, `ms-clima`, `ms-notificaciones` y `api-gateway`, con healthchecks y `depends_on: condition: service_healthy` para respetar el orden de arranque.
+- `docker-compose.yml`: define `postgres`, `postgres-actividades`, `keycloak`, `ms-actividades`, `ms-clases`, `ms-clima`, `ms-notificaciones` y `api-gateway`, con healthchecks y `depends_on: condition: service_healthy` para respetar el orden de arranque.
 - `.env.example`: plantilla de variables.
-- `infra/postgres/init.sql`: crea las bases y los usuarios.
+- `infra/postgres/init.sh`: crea las bases y los usuarios. Lo usan los dos contenedores de PostgreSQL, y cada uno crea solo sus bases.
 - `infra/keycloak/climafit-realm.json`: realm con roles, clientes y usuarios de prueba (`admin1`, `profe1`, `profe2`, `alumno1`, `alumno2`, `alumno3`).
 - Un `Dockerfile` multi-etapa por componente.
 - Migraciones Flyway en cada servicio con datos iniciales:
@@ -937,7 +946,7 @@ erDiagram
 
 Para desarrollo local sin contenedores para los servicios:
 1. `mvn -f climafit-commons/pom.xml clean install`.
-2. `docker compose up -d postgres keycloak`.
+2. `docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres postgres-actividades keycloak` (publica los puertos de las bases solo en `127.0.0.1`).
 3. Ejecutar cada servicio con el perfil `local`.
 
 ### 10.3 Colección ejecutable de llamadas (Postman)
@@ -948,7 +957,7 @@ Se entregan `postman/ClimaFit.postman_collection.json` y `postman/ClimaFit-local
 - **00 Preparación:** tokens de los 6 usuarios de prueba, cálculo de fechas relativas a la hora actual (en hora de Córdoba) y puesta de ms-clima en modo SIMULADO sin escenarios.
 - **01 Seguridad:** 401 sin token y con token inválido, 403 por rol, 404 en ruta interna y una solicitud permitida.
 - **02 Catálogo:** alta de actividad, validación 400, espacios, ejercicio personalizado, 404 al consultar un ejercicio ajeno y baja lógica.
-- **03 Contactos:** consentimiento de cada usuario (el alumno 2 no acepta WhatsApp) y teléfono inválido (400).
+- **03 Contactos:** consentimiento de cada usuario (el alumno 2 no acepta avisos) y chat de Telegram inválido (400).
 - **04 Clases e inscripciones:**
   - creación de las clases A, B y C (profesor 1, al aire libre) y E (profesor 2, techada);
   - ejercicio incompatible (422), superposición del profesor (409) y alumno que intenta crear una clase (403);
@@ -963,7 +972,7 @@ Se entregan `postman/ClimaFit.postman_collection.json` y `postman/ClimaFit-local
 **Variables de entorno:**
 - `baseUrl` (`http://localhost:8080/api`), `keycloakUrl`, `realm` y `clientId`.
 - Usuarios y contraseñas de prueba.
-- `telefonoPrueba`.
+- `telegramChatIdPrueba`.
 - Ids y coordenadas de los datos iniciales.
 
 Los tokens, los ids de las clases creadas y las fechas se guardan automáticamente como variables de la colección con scripts de test.
@@ -998,7 +1007,7 @@ Los tokens, los ids de las clases creadas y las fechas se guardan automáticamen
 4. Mantener la clase, ponerla en riesgo con decisión del profesor o suspenderla.
 5. Búsqueda automática de un nuevo día.
 6. Traslado de las inscripciones.
-7. Aviso por WhatsApp a cada inscripto.
+7. Aviso por Telegram a cada inscripto.
 8. Registro en el historial.
 
 El proceso se ejecuta de forma programada y también a pedido.
@@ -1020,7 +1029,7 @@ El proceso se ejecuta de forma programada y también a pedido.
 
 **Integraciones relevantes:**
 - **Open-Meteo:** define la decisión de suspender.
-- **Twilio WhatsApp:** canal de aviso, con proveedor `log` para la demo.
+- **Telegram Bot API:** canal de aviso, con proveedor `log` para la demo.
 - **Keycloak:** usuarios y tokens de servicio.
 - **Colaboración entre servicios:** ms-clases con ms-actividades, ms-clima y ms-notificaciones.
 
@@ -1037,14 +1046,14 @@ El proceso se ejecuta de forma programada y también a pedido.
 - Asistencia.
 - Lista de espera.
 - Confirmación de asistencia a clases reprogramadas.
-- Respuestas por WhatsApp.
+- Respuestas por Telegram.
 - Otros canales de notificación.
 - Reserva o capacidad de espacios.
 - Multi-tenant.
 - Broker de mensajería.
 
 **Riesgos y dependencias:**
-- **Sandbox de Twilio:** cada número destinatario tiene que unirse previamente y hay límites de sesión. Mitigación: el proveedor `log` permite demostrar el proceso completo; el envío real se muestra con el teléfono de un integrante.
+- **Telegram exige que el usuario le escriba primero al bot:** un bot no puede iniciar una conversación ni escribirle a un número de teléfono, así que cada destinatario tiene que mandarle /start y registrar su chat_id. Mitigación: el proveedor `log` permite demostrar el proceso completo; el envío real se muestra con el Telegram de un integrante.
 - **Disponibilidad de Open-Meteo y clima real del día de la defensa:** mitigación con caché, el tratamiento de RN16 y el modo SIMULADO para los escenarios.
 - **Configuración de Keycloak en Docker** (emisor del token, importación del realm): se resuelve con `KC_HOSTNAME` fijo y el realm versionado en el repositorio.
 - **Zonas horarias:** se usa `America/Argentina/Cordoba` en la JVM, en la base y en la consulta a Open-Meteo.
@@ -1071,7 +1080,7 @@ El proceso se ejecuta de forma programada y también a pedido.
 - Relación: F09, RN01, RN03.
 
 **CP3 — Proceso central: suspensión y reprogramación automática**
-- Condición inicial: la clase A de Yoga está PROGRAMADA dentro de las próximas 24 h, con el alumno 1 (acepta WhatsApp) y el alumno 2 (no acepta), y hay un escenario de 90 % de lluvia con 5 mm/h en el horario de la clase (Yoga tolera 0,5 mm/h).
+- Condición inicial: la clase A de Yoga está PROGRAMADA dentro de las próximas 24 h, con el alumno 1 (acepta Telegram) y el alumno 2 (no acepta), y hay un escenario de 90 % de lluvia con 5 mm/h en el horario de la clase (Yoga tolera 0,5 mm/h).
 - Acción:
   1. `POST /api/clases/{A}/evaluaciones`.
   2. Consultar la clase, sus inscripciones, `GET /api/clases/{A}/historial` y `GET /api/notificaciones?claseId={A}`.
