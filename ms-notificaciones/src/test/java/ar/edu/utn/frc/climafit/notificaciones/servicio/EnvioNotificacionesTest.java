@@ -54,7 +54,8 @@ class EnvioNotificacionesTest {
 
     private void conContacto(String chatId, boolean acepta) {
         Contacto contacto = new Contacto(ALUMNO);
-        contacto.actualizar(chatId, acepta);
+        contacto.definirConsentimiento(acepta);
+        contacto.registrarChat(chatId);
         when(contactos.findById(ALUMNO)).thenReturn(Optional.of(contacto));
     }
 

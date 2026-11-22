@@ -78,7 +78,23 @@ y usarlo como `Authorization: Bearer <access_token>`.
 
 Antes los avisos iban por WhatsApp. Se cambió a Telegram porque el proveedor de WhatsApp, con una cuenta de prueba, rechazaba todos los envíos de texto libre. La Bot API de Telegram es gratuita y no tiene ese límite.
 
-**Diferencia importante con WhatsApp:** un bot de Telegram no puede escribirle a un número de teléfono ni iniciar una conversación. Solo puede enviar a un `chat_id`, y únicamente si el usuario antes le mandó `/start`. Por eso el contacto guarda `telegramChatId` en lugar de un teléfono.
+**Diferencia importante con WhatsApp:** un bot de Telegram no puede escribirle a un número de teléfono ni iniciar una conversación. Solo puede enviar a un `chat_id`, y únicamente si el usuario antes le escribió al bot. Por eso el contacto guarda `telegramChatId` en lugar de un teléfono.
+
+### Vinculación automática
+
+El usuario no tiene que averiguar su `chat_id`:
+
+1. Acepta los avisos con `PUT /api/contactos/mio` y `{"aceptaTelegram": true}`.
+2. La respuesta trae `linkVinculacion`, por ejemplo `https://t.me/ClimaFitBot?start=Xy7...`, con `vinculado: false`.
+3. El usuario abre el link y toca **Iniciar**. El bot recibe `/start <código>`, guarda el chat y le contesta "¡Listo! Tu Telegram quedó vinculado a ClimaFit".
+4. Desde ahí `GET /api/contactos/mio` muestra `vinculado: true` y el `telegramChatId`.
+
+Detalles:
+- El código es aleatorio, de un solo uso y vence a las 24 h (`climafit.telegram.vinculacion.vigencia`). Si vence, se vuelve a hacer el `PUT` y sale uno nuevo.
+- Si el usuario rechaza los avisos (`aceptaTelegram: false`), el link pendiente deja de servir.
+- Los mensajes del bot se leen con `getUpdates` cada 3 segundos: no hace falta una URL pública ni webhook. Solo funciona con `TELEGRAM_PROVEEDOR=bot`.
+- Mientras el usuario no toca Iniciar, sus notificaciones quedan `OMITIDA` con el motivo "no tiene su chat de Telegram registrado" (RN14).
+- Para pruebas se puede seguir cargando el chat a mano: `{"telegramChatId": "123456789", "aceptaTelegram": true}`.
 
 ### Pasos para el envío real
 
@@ -87,15 +103,13 @@ Antes los avisos iban por WhatsApp. Se cambió a Telegram porque el proveedor de
    ```env
    TELEGRAM_PROVEEDOR=bot
    TELEGRAM_BOT_TOKEN=123456789:AA...
+   TELEGRAM_BOT_USUARIO=ClimaFitBot
    ```
    El token es un secreto: va solo en el `.env`, nunca en el código ni en el repo.
 3. Recrear el servicio para que tome las variables (con `restart` no alcanza):
    `docker compose up -d --force-recreate ms-notificaciones`
-4. Desde el Telegram de quien va a recibir los avisos, abrir el bot y mandarle `/start`.
-5. Averiguar su `chat_id`. En un chat privado es el id numérico del usuario: lo responde **@userinfobot**. También aparece en
-   `https://api.telegram.org/bot<TOKEN>/getUpdates` después del `/start`, en `result[].message.chat.id`.
-6. Registrarlo con `PUT /api/contactos/mio`: `{"telegramChatId": "123456789", "aceptaTelegram": true}`.
-7. Inscribir al alumno a una clase y cancelarla o reprogramarla como profesor. Para seguir el envío: `docker compose logs -f ms-notificaciones`. Si salió bien aparece `Telegram enviado al chat ... (message_id ...)`.
+4. Con el token de un alumno, hacer `PUT /api/contactos/mio` con `{"aceptaTelegram": true}`, abrir el `linkVinculacion` desde el celular y tocar **Iniciar**.
+5. Inscribir al alumno a una clase y cancelarla o reprogramarla como profesor. Para seguir el envío: `docker compose logs -f ms-notificaciones`. Si salió bien aparece `Telegram enviado al chat ... (message_id ...)`.
 
 Si el usuario nunca le escribió al bot o lo bloqueó, Telegram responde 403. La notificación se reintenta 3 veces y queda `FALLIDA` con el motivo en `ultimo_error`, sin el token.
 

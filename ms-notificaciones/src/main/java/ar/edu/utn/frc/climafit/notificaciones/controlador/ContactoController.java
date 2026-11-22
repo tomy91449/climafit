@@ -28,7 +28,10 @@ public class ContactoController {
     }
 
     @PutMapping("/mio")
-    @Operation(summary = "Registrar o actualizar el chat de Telegram y el consentimiento para avisos")
+    @Operation(summary = "Aceptar o rechazar los avisos por Telegram",
+            description = "Con {\"aceptaTelegram\": true} la respuesta trae linkVinculacion: el usuario lo abre, "
+                    + "toca Iniciar en el bot y su chat queda registrado solo (vinculado pasa a true). "
+                    + "telegramChatId es opcional y permite cargar el chat a mano.")
     public ContactoResponse guardar(@Valid @RequestBody ContactoRequest request) {
         return servicio.guardarMio(request);
     }

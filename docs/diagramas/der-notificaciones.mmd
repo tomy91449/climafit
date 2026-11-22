@@ -4,6 +4,8 @@ erDiagram
     varchar usuario_id PK "sub Keycloak"
     varchar telegram_chat_id "chat de Telegram (tras /start al bot)"
     boolean acepta_telegram
+    varchar codigo_vinculacion UK "código del link t.me, un solo uso"
+    timestamp codigo_vence
     timestamp actualizado
   }
   EVENTO_NOTIFICACION {

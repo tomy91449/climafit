@@ -2,6 +2,9 @@ package ar.edu.utn.frc.climafit.notificaciones;
 
 import ar.edu.utn.frc.climafit.notificaciones.dominio.EstadoNotificacion;
 import ar.edu.utn.frc.climafit.notificaciones.repositorio.NotificacionRepository;
+import ar.edu.utn.frc.climafit.notificaciones.servicio.ContactoService;
+import ar.edu.utn.frc.climafit.notificaciones.servicio.ContactoService.ResultadoVinculacion;
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -40,6 +43,8 @@ class NotificacionesIntegracionTest {
     private MockMvc mvc;
     @Autowired
     private NotificacionRepository notificaciones;
+    @Autowired
+    private ContactoService contactos;
 
     private static RequestPostProcessor usuario(String sub, String rol) {
         return jwt().jwt(j -> j.subject(sub)).authorities(new SimpleGrantedAuthority("ROLE_" + rol));
@@ -144,12 +149,56 @@ class NotificacionesIntegracionTest {
     }
 
     @Test
-    void aceptarSinChatIdDevuelve400() throws Exception {
+    void aceptarSinChatDevuelveElLinkYAlTocarIniciarQuedaVinculado() throws Exception {
+        String respuesta = mvc.perform(put("/contactos/mio").with(usuario("alu-y", "ALUMNO"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"aceptaTelegram\": true}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.vinculado").value(false))
+                .andExpect(jsonPath("$.telegramChatId").doesNotExist())
+                .andReturn().getResponse().getContentAsString();
+        String link = JsonPath.read(respuesta, "$.linkVinculacion");
+        assertThat(link).startsWith("https://t.me/ClimaFitBot?start=");
+        String codigo = link.substring(link.indexOf("start=") + "start=".length());
+        assertThat(codigo).matches("[A-Za-z0-9_-]{32}");
+
+        // Guardar de nuevo sin vincular no cambia el link.
         mvc.perform(put("/contactos/mio").with(usuario("alu-y", "ALUMNO"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"aceptaTelegram\": true}"))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.codigo").value("DATOS_INVALIDOS"));
+                .andExpect(jsonPath("$.linkVinculacion").value(link));
+
+        // El usuario toca "Iniciar": el bot recibe "/start <código>" desde su chat.
+        assertThat(contactos.vincular(codigo, "555000111")).isEqualTo(ResultadoVinculacion.VINCULADO);
+
+        mvc.perform(get("/contactos/mio").with(usuario("alu-y", "ALUMNO")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.vinculado").value(true))
+                .andExpect(jsonPath("$.telegramChatId").value("555000111"))
+                .andExpect(jsonPath("$.linkVinculacion").doesNotExist());
+
+        // El código es de un solo uso.
+        assertThat(contactos.vincular(codigo, "999")).isEqualTo(ResultadoVinculacion.CODIGO_INVALIDO);
+    }
+
+    @Test
+    void rechazarLosAvisosAnulaElLinkPendiente() throws Exception {
+        String respuesta = mvc.perform(put("/contactos/mio").with(usuario("alu-z", "ALUMNO"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"aceptaTelegram\": true}"))
+                .andReturn().getResponse().getContentAsString();
+        String link = JsonPath.read(respuesta, "$.linkVinculacion");
+        String codigo = link.substring(link.indexOf("start=") + "start=".length());
+
+        mvc.perform(put("/contactos/mio").with(usuario("alu-z", "ALUMNO"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"aceptaTelegram\": false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.linkVinculacion").doesNotExist());
+
+        assertThat(contactos.vincular(codigo, "555000222")).isEqualTo(ResultadoVinculacion.CODIGO_INVALIDO);
+        assertThat(contactos.vincular("codigo-que-no-existe", "555000222"))
+                .isEqualTo(ResultadoVinculacion.CODIGO_INVALIDO);
     }
 
     @Test

@@ -87,6 +87,36 @@ public class ProveedorTelegramBot implements ProveedorTelegram {
         return id;
     }
 
+    /**
+     * Mensajes que le llegaron al bot desde {@code offset} (getUpdates sin espera). Pasar como offset
+     * el último update_id + 1 le confirma a Telegram los anteriores, que ya no se vuelven a recibir.
+     *
+     * @return el arreglo "result" de la respuesta (vacío si no hay mensajes nuevos)
+     * @throws EnvioTelegramException si Telegram respondió con error o no respondió
+     */
+    public JsonNode obtenerActualizaciones(long offset) {
+        JsonNode respuesta;
+        try {
+            respuesta = restClient.post()
+                    .uri("/bot{token}/getUpdates", token)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(Map.of("offset", offset, "timeout", 0, "allowed_updates", new String[]{"message"}))
+                    .retrieve()
+                    .body(JsonNode.class);
+        } catch (RestClientResponseException ex) {
+            // 409: el bot tiene un webhook configurado y Telegram no deja usar getUpdates a la vez.
+            throw new EnvioTelegramException(sinToken("Telegram respondió " + ex.getStatusCode().value() + ": "
+                    + descripcion(ex)));
+        } catch (RestClientException ex) {
+            throw new EnvioTelegramException(sinToken("No se pudo contactar a Telegram: " + ex.getMessage()));
+        }
+        if (respuesta == null || !respuesta.path("ok").asBoolean(false)) {
+            String detalle = respuesta == null ? "respuesta vacía" : respuesta.path("description").asText("sin detalle");
+            throw new EnvioTelegramException(sinToken("Telegram no devolvió los mensajes: " + detalle));
+        }
+        return respuesta.path("result");
+    }
+
     /** Telegram explica el error en el campo "description" del cuerpo. */
     private static String descripcion(RestClientResponseException ex) {
         try {

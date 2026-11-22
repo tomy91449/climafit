@@ -627,7 +627,7 @@ Abreviaturas de la columna Seguridad:
 
 | Microservicio | Recurso | Método HTTP | Endpoint | Operación de negocio | Seguridad |
 |---|---|---|---|---|---|
-| ms-notificaciones | Contactos | PUT | /contactos/mio | Registrar el chat de Telegram y el consentimiento para avisos | Autenticado |
+| ms-notificaciones | Contactos | PUT | /contactos/mio | Aceptar o rechazar los avisos; devuelve el link para vincular Telegram | Autenticado |
 | ms-notificaciones | Contactos | GET | /contactos/mio | Consultar las preferencias de contacto propias | Autenticado |
 | ms-notificaciones | Notificaciones | GET | /notificaciones?claseId= | Consultar las notificaciones generadas para una clase y su estado | PROFESOR (de esa clase) / ADMIN |
 | ms-notificaciones | Notificaciones | POST | /internal/notificaciones | Registrar un evento de clase y programar el envío a cada destinatario (RN14, RN15) | Servicio (no expuesto en el gateway) |
@@ -779,6 +779,8 @@ erDiagram
     varchar usuario_id PK "sub Keycloak"
     varchar telegram_chat_id "chat de Telegram (tras /start al bot)"
     boolean acepta_telegram
+    varchar codigo_vinculacion UK "código del link t.me, un solo uso"
+    timestamp codigo_vence
     timestamp actualizado
   }
   EVENTO_NOTIFICACION {
@@ -1053,7 +1055,7 @@ El proceso se ejecuta de forma programada y también a pedido.
 - Broker de mensajería.
 
 **Riesgos y dependencias:**
-- **Telegram exige que el usuario le escriba primero al bot:** un bot no puede iniciar una conversación ni escribirle a un número de teléfono, así que cada destinatario tiene que mandarle /start y registrar su chat_id. Mitigación: el proveedor `log` permite demostrar el proceso completo; el envío real se muestra con el Telegram de un integrante.
+- **Telegram exige que el usuario le escriba primero al bot:** un bot no puede iniciar una conversación ni escribirle a un número de teléfono, así que cada destinatario tiene que tocar Iniciar en el bot una vez. Mitigación: al aceptar los avisos se le da un link t.me con un código de un solo uso y el chat se vincula solo, sin que el usuario tenga que conocer su chat_id; el proveedor `log` permite demostrar el proceso completo; el envío real se muestra con el Telegram de un integrante.
 - **Disponibilidad de Open-Meteo y clima real del día de la defensa:** mitigación con caché, el tratamiento de RN16 y el modo SIMULADO para los escenarios.
 - **Configuración de Keycloak en Docker** (emisor del token, importación del realm): se resuelve con `KC_HOSTNAME` fijo y el realm versionado en el repositorio.
 - **Zonas horarias:** se usa `America/Argentina/Cordoba` en la JVM, en la base y en la consulta a Open-Meteo.

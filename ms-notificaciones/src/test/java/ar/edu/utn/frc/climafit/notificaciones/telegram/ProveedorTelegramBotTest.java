@@ -97,6 +97,30 @@ class ProveedorTelegramBotTest {
     }
 
     @Test
+    void leeLosMensajesDelBotDesdeElOffset() {
+        respuesta = "{\"ok\":true,\"result\":[{\"update_id\":7,\"message\":{\"text\":\"/start ABC\"}}]}";
+
+        var resultado = proveedor(url).obtenerActualizaciones(7);
+
+        assertThat(resultado.isArray()).isTrue();
+        assertThat(resultado.get(0).path("update_id").asLong()).isEqualTo(7);
+        assertThat(rutaRecibida.get()).isEqualTo("/bot" + TOKEN + "/getUpdates");
+        assertThat(cuerpoRecibido.get()).contains("\"offset\":7").contains("\"timeout\":0");
+    }
+
+    @Test
+    void conflictoAlLeerMensajesNoMuestraElToken() {
+        status = 409;
+        respuesta = "{\"ok\":false,\"error_code\":409,\"description\":\"Conflict: can't use getUpdates method while webhook is active\"}";
+
+        assertThatThrownBy(() -> proveedor(url).obtenerActualizaciones(0))
+                .isInstanceOf(EnvioTelegramException.class)
+                .hasMessageContaining("409")
+                .hasMessageContaining("webhook")
+                .hasMessageNotContaining(TOKEN);
+    }
+
+    @Test
     void sinTokenNoArranca() {
         assertThatThrownBy(() -> new ProveedorTelegramBot(RestClient.builder(), url, " "))
                 .isInstanceOf(IllegalStateException.class)

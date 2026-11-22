@@ -29,6 +29,16 @@ public class Contacto {
     @Column(name = "acepta_telegram", nullable = false)
     private boolean aceptaTelegram;
 
+    /**
+     * Código del link de vinculación (t.me/&lt;bot&gt;?start=&lt;código&gt;). Existe solo mientras el usuario
+     * aceptó avisos y todavía no tocó "Iniciar" en el bot. Es de un solo uso.
+     */
+    @Column(name = "codigo_vinculacion")
+    private String codigoVinculacion;
+
+    @Column(name = "codigo_vence")
+    private LocalDateTime codigoVence;
+
     @Column(nullable = false)
     private LocalDateTime actualizado;
 
@@ -40,19 +50,52 @@ public class Contacto {
         this.usuarioId = usuarioId;
     }
 
-    public void actualizar(String telegramChatId, boolean aceptaTelegram) {
-        this.telegramChatId = telegramChatId;
+    /** RN14: el usuario acepta o rechaza los avisos. Si rechaza, un link pendiente deja de servir. */
+    public void definirConsentimiento(boolean aceptaTelegram) {
         this.aceptaTelegram = aceptaTelegram;
+        if (!aceptaTelegram) {
+            descartarCodigo();
+        }
         this.actualizado = LocalDateTime.now();
+    }
+
+    /** Guarda el chat de Telegram (por el link de vinculación o cargado a mano) y descarta el código. */
+    public void registrarChat(String telegramChatId) {
+        this.telegramChatId = telegramChatId;
+        descartarCodigo();
+        this.actualizado = LocalDateTime.now();
+    }
+
+    /** Deja listo un código nuevo para el link de vinculación. */
+    public void prepararVinculacion(String codigo, LocalDateTime vence) {
+        this.codigoVinculacion = codigo;
+        this.codigoVence = vence;
+        this.actualizado = LocalDateTime.now();
+    }
+
+    public boolean tieneChat() {
+        return telegramChatId != null && !telegramChatId.isBlank();
+    }
+
+    /** El link se muestra solo si aceptó, todavía no vinculó su chat y el código no venció. */
+    public boolean tieneCodigoVigente(LocalDateTime ahora) {
+        return codigoVinculacion != null && codigoVence != null && codigoVence.isAfter(ahora);
     }
 
     /** RN14: solo se le envía por Telegram si aceptó Y tiene su chat registrado. */
     public boolean puedeRecibirTelegram() {
-        return aceptaTelegram && telegramChatId != null && !telegramChatId.isBlank();
+        return aceptaTelegram && tieneChat();
+    }
+
+    private void descartarCodigo() {
+        this.codigoVinculacion = null;
+        this.codigoVence = null;
     }
 
     public String getUsuarioId() { return usuarioId; }
     public String getTelegramChatId() { return telegramChatId; }
     public boolean isAceptaTelegram() { return aceptaTelegram; }
+    public String getCodigoVinculacion() { return codigoVinculacion; }
+    public LocalDateTime getCodigoVence() { return codigoVence; }
     public LocalDateTime getActualizado() { return actualizado; }
 }

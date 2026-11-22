@@ -40,6 +40,11 @@ spring:
       pool:
         core-size: 4
         max-size: 8
+    scheduling:
+      # Dos tareas periódicas: la recuperación de pendientes y la lectura de mensajes del bot.
+      # Con un solo hilo, una recuperación con reintentos demoraría la vinculación.
+      pool:
+        size: 2
 
 climafit:
   telegram:
@@ -52,6 +57,12 @@ climafit:
       url: https://api.telegram.org
       # Token que entrega @BotFather. Es un secreto: va solo en el .env, nunca en el código.
       token: ${TELEGRAM_BOT_TOKEN:}
+      # Usuario del bot (sin @). Arma el link de vinculación t.me/<usuario>?start=<código>.
+      usuario: ${TELEGRAM_BOT_USUARIO:ClimaFitBot}
+    vinculacion:
+      # Cuánto dura el link de vinculación y cada cuánto se leen los mensajes del bot (solo con "bot").
+      vigencia: PT24H
+      cada: PT3S
   notificaciones:
     # Cada cuánto se buscan notificaciones PENDIENTE colgadas, y qué antigüedad deben tener.
     recuperacion-cada: PT5M
