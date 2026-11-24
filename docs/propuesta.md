@@ -1039,7 +1039,7 @@ Se entregan `postman/ClimaFit.postman_collection.json` y `postman/ClimaFit-local
 - **00 Preparación:** tokens de los 6 usuarios de prueba, cálculo de fechas relativas a la hora actual (en hora de Córdoba) y puesta de ms-clima en modo SIMULADO sin escenarios.
 - **01 Seguridad:** 401 sin token y con token inválido, 403 por rol, 404 en ruta interna y una solicitud permitida.
 - **02 Catálogo:** alta de actividad, validación 400, espacios, ejercicio personalizado, 404 al consultar un ejercicio ajeno y baja lógica.
-- **03 Contactos:** consentimiento de cada usuario (el alumno 2 no acepta avisos) y chat de Telegram inválido (400).
+- **03 Contactos:** consentimiento de cada usuario (el alumno 3 no acepta avisos) y chat de Telegram inválido (400). Ningún request carga un chat: los celulares se vinculan con el link de la carpeta 11.
 - **04 Clases e inscripciones:**
   - creación de las clases A, B y C (profesor 1, al aire libre) y E (profesor 2, techada);
   - ejercicio incompatible (422), superposición del profesor (409) y alumno que intenta crear una clase (403);
@@ -1048,13 +1048,13 @@ Se entregan `postman/ClimaFit.postman_collection.json` y `postman/ClimaFit-local
 - **06 Proceso: NO_APTA y reprogramación:** escenario de lluvia → clase A REPROGRAMADA al día siguiente a la misma hora → inscripciones activas → historial → notificaciones ENVIADA y OMITIDA, sin duplicados.
 - **07 Proceso: EN_RIESGO:** viento cerca del límite → EN_RIESGO y alerta al profesor → el profesor 2 intenta decidir (403) → el profesor 1 suspende → REPROGRAMADA.
 - **08 Proceso: sin día viable:** lluvia durante 8 días → SUSPENDIDA_SIN_FECHA → el profesor reagenda → REPROGRAMADA, con sus avisos.
-- **09 Otras reglas:** clase techada no evaluable (409), decisión sobre una clase que no está en riesgo (409), cancelación ajena (403), cancelación propia y inscripción a una clase cancelada (409), evaluación general.
+- **09 Otras reglas:** clase techada no evaluable (409), decisión sobre una clase que no está en riesgo (409), cancelación ajena (403), cancelación propia y inscripción a una clase cancelada (409), cancelación de la clase A con aviso por Telegram solo a sus inscriptos, evaluación general.
 - **10 Integración real:** modo REAL y consulta del pronóstico real de Open-Meteo, luego vuelta al modo SIMULADO.
+- **11 Vincular Telegram (manual):** un request por usuario que devuelve el link para vincular su celular con el bot. Se ejecuta suelto, fuera del Runner.
 
 **Variables de entorno:**
 - `baseUrl` (`http://localhost:8080/api`), `keycloakUrl`, `realm` y `clientId`.
 - Usuarios y contraseñas de prueba.
-- `telegramChatIdPrueba`.
 - Ids y coordenadas de los datos iniciales.
 
 Los tokens, los ids de las clases creadas y las fechas se guardan automáticamente como variables de la colección con scripts de test.
@@ -1154,15 +1154,15 @@ El proceso se ejecuta de forma programada y también a pedido.
 - Relación: F01, F05, RN05; carpetas 01, 04 y 07.
 
 **CP2 — Inscripción con cupo y superposición**
-- Condición inicial: la clase A (cupo 2) tiene inscriptos al alumno 1 y al alumno 2, y la clase E es a la misma hora que A.
+- Condición inicial: la clase A (cupo 2) tiene inscriptos al alumno 1 y al alumno 3, y la clase E es a la misma hora que A.
 - Acción:
-  1. El alumno 3 hace `POST /api/clases/{A}/inscripciones`.
+  1. El alumno 2 hace `POST /api/clases/{A}/inscripciones`.
   2. El alumno 1 hace `POST /api/clases/{E}/inscripciones`.
 - Resultado esperado: 409 `CUPO_COMPLETO` y 409 `SUPERPOSICION_ALUMNO`.
 - Relación: F09, RN01, RN03.
 
 **CP3 — Proceso central: suspensión y reprogramación automática**
-- Condición inicial: la clase A de Yoga está PROGRAMADA dentro de las próximas 24 h, con el alumno 1 (acepta Telegram) y el alumno 2 (no acepta), y hay un escenario de 90 % de lluvia con 5 mm/h en el horario de la clase (Yoga tolera 0,5 mm/h).
+- Condición inicial: la clase A de Yoga está PROGRAMADA dentro de las próximas 24 h, con el alumno 1 (acepta Telegram) y el alumno 3 (no acepta), y hay un escenario de 90 % de lluvia con 5 mm/h en el horario de la clase (Yoga tolera 0,5 mm/h).
 - Acción:
   1. `POST /api/clases/{A}/evaluaciones`.
   2. Consultar la clase, sus inscripciones, `GET /api/clases/{A}/historial` y `GET /api/notificaciones?claseId={A}`.
@@ -1171,7 +1171,7 @@ El proceso se ejecuta de forma programada y también a pedido.
   - la clase queda REPROGRAMADA al día siguiente a la misma hora;
   - las 2 inscripciones siguen activas;
   - el historial muestra PROGRAMADA → SUSPENDIDA → REPROGRAMADA;
-  - hay una notificación ENVIADA para el alumno 1 y una OMITIDA para el alumno 2, sin duplicados.
+  - hay una notificación ENVIADA para el alumno 1 (si vinculó su celular) y una OMITIDA para el alumno 3, sin duplicados.
 - Relación: F11, F13, F14, F15, RN09, RN10, RN11, RN13, RN14, RN15.
 
 **CP4 — Clase en riesgo y decisión del profesor**

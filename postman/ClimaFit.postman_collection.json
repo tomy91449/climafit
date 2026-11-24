@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "ab2b8a89-24cc-4c80-8e9f-92b3ac146ec6",
     "name": "ClimaFit - TPI Backend 2026",
-    "description": "Colección ejecutable de ClimaFit. Ejecutar con el Collection Runner en orden, con la solución levantada mediante docker compose (perfil demo). Las carpetas 05 a 08 recorren el proceso central. La URL base apunta al API Gateway.",
+    "description": "Colección ejecutable de ClimaFit con el bot real de Telegram (TELEGRAM_PROVEEDOR=bot). Ejecutar con el Collection Runner en orden, con la solución levantada mediante docker compose (perfil demo). Las carpetas 05 a 09 recorren el proceso central y mandan avisos reales a los celulares vinculados. Para vincular un celular usar la carpeta 11 (no hace falta correrla en el Runner). La URL base apunta al API Gateway.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
@@ -53,21 +53,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Token obtenido\", () => pm.response.to.have.status(200));",
-                  "pm.collectionVariables.set(\"tokenAdmin\", pm.response.json().access_token);",
-                  "// Calcula fechas relativas en hora de Córdoba (UTC-3), redondeadas a la hora siguiente",
-                  "const H = 3600 * 1000;",
-                  "const p = n => String(n).padStart(2, \"0\");",
-                  "const fmt = d => { const l = new Date(d.getTime() - 3 * H); return `${l.getUTCFullYear()}-${p(l.getUTCMonth()+1)}-${p(l.getUTCDate())}T${p(l.getUTCHours())}:00:00`; };",
-                  "const base = new Date(Math.ceil(Date.now() / H) * H);",
-                  "const at = h => new Date(base.getTime() + h * H);",
-                  "const v = pm.collectionVariables;",
-                  "v.set(\"inicioA\", fmt(at(6)));  v.set(\"inicioA_mas1dia\", fmt(at(30)));",
-                  "v.set(\"simADesde\", fmt(at(5))); v.set(\"simAHasta\", fmt(at(7)));",
-                  "v.set(\"inicioB\", fmt(at(8)));  v.set(\"inicioB_mas1dia\", fmt(at(32)));",
-                  "v.set(\"simBDesde\", fmt(at(7))); v.set(\"simBHasta\", fmt(at(9)));",
-                  "v.set(\"inicioC\", fmt(at(10))); v.set(\"simCDesde\", fmt(at(9))); v.set(\"simCHasta\", fmt(at(10 + 24 * 8)));",
-                  "v.set(\"nuevoInicioC\", fmt(at(10 + 24 * 9)));",
-                  "v.set(\"pronDesde\", fmt(at(1))); v.set(\"pronHasta\", fmt(at(12)));"
+                  "pm.collectionVariables.set(\"tokenAdmin\", pm.response.json().access_token);"
                 ]
               }
             }
@@ -319,6 +305,68 @@
           ]
         },
         {
+          "name": "Buscar horario libre para las clases",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/clases",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Calcula las fechas de la corrida (hora de Córdoba) y las corre hasta un horario donde no haya otra clase activa. Así la colección se puede correr varias veces, aunque una corrida anterior haya quedado a medias."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "// Fechas relativas a la hora actual, en hora de Córdoba (UTC-3), redondeadas a la hora siguiente.",
+                  "// Si una corrida anterior dejó clases activas en esos horarios, se corre todo de a una hora hasta encontrar",
+                  "// un hueco: si no, el profesor o los alumnos chocarían con esas clases (409 por superposición).",
+                  "const H = 3600 * 1000;",
+                  "const p = n => String(n).padStart(2, \"0\");",
+                  "const fmt = d => { const l = new Date(d.getTime() - 3 * H); return `${l.getUTCFullYear()}-${p(l.getUTCMonth()+1)}-${p(l.getUTCDate())}T${p(l.getUTCHours())}:00:00`; };",
+                  "const ms = s => Date.parse(s + \"-03:00\");",
+                  "const ocupadas = pm.response.json().filter(x => x.estado !== \"CANCELADA\").map(x => [ms(x.inicio), ms(x.inicio) + x.duracionMinutos * 60000]);",
+                  "const libre = d => !ocupadas.some(([i, f]) => i < d.getTime() + H && f > d.getTime());",
+                  "const base0 = new Date(Math.ceil(Date.now() / H) * H);",
+                  "// Horas que usa la corrida: A y E (6), B (8), C (10) y las reprogramaciones de A y B al día siguiente (30 y 32).",
+                  "const horas = [6, 8, 10, 30, 32];",
+                  "let k = 0;",
+                  "while (k < 12 && !horas.every(h => libre(new Date(base0.getTime() + (h + k) * H)))) k++;",
+                  "pm.test(\"Hay un horario libre para las clases\", () => pm.expect(k).to.be.below(12));",
+                  "const base = new Date(base0.getTime() + k * H);",
+                  "const at = h => new Date(base.getTime() + h * H);",
+                  "const v = pm.collectionVariables;",
+                  "v.set(\"inicioA\", fmt(at(6)));  v.set(\"inicioA_mas1dia\", fmt(at(30)));",
+                  "v.set(\"simADesde\", fmt(at(5))); v.set(\"simAHasta\", fmt(at(7)));",
+                  "v.set(\"inicioB\", fmt(at(8)));  v.set(\"inicioB_mas1dia\", fmt(at(32)));",
+                  "v.set(\"simBDesde\", fmt(at(7))); v.set(\"simBHasta\", fmt(at(9)));",
+                  "v.set(\"inicioC\", fmt(at(10))); v.set(\"simCDesde\", fmt(at(9))); v.set(\"simCHasta\", fmt(at(10 + 24 * 8)));",
+                  "// La fecha nueva de C: un día libre después de los 8 días de lluvia.",
+                  "const minuto = Math.floor(Date.now() / 60000);",
+                  "let dia = 9 + minuto % 60;",
+                  "while (!libre(at(10 + 24 * dia))) dia++;",
+                  "v.set(\"nuevoInicioC\", fmt(at(10 + 24 * dia)));",
+                  "v.set(\"pronDesde\", fmt(at(1))); v.set(\"pronHasta\", fmt(at(12)));",
+                  "// Sufijo para los nombres del catálogo nuevo (no se pueden repetir entre corridas).",
+                  "v.set(\"sufijo\", fmt(new Date()).slice(5, 10).replace(\"-\", \"\") + \"-\" + String(minuto % 10000).padStart(4, \"0\"));",
+                  "console.log(k === 0 ? \"Horario libre a la primera\" : \"Clases corridas \" + k + \" h para no chocar con clases existentes\");"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Poner ms-clima en modo SIMULADO",
           "request": {
             "method": "PUT",
@@ -420,16 +468,26 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer eyJhbGciOiJSUzI1NiJ9.token.alterado"
+                "value": "Bearer {{tokenAlterado}}"
               }
             ],
             "url": "{{baseUrl}}/actividades",
             "auth": {
               "type": "noauth"
             },
-            "description": "Enviar un token alterado."
+            "description": "Enviar un token alterado. Se arma en el pre-request para que Postman no lo tome como un secreto real."
           },
           "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Token falso a propósito: cabecera JWT válida, firma inventada.",
+                  "pm.variables.set(\"tokenAlterado\", [\"eyJhbGciOiJSUzI1NiJ9\", \"token\", \"alterado\"].join(\".\"));"
+                ]
+              }
+            },
             {
               "listen": "test",
               "script": {
@@ -576,7 +634,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Pilates\",\n  \"descripcion\": \"Pilates de suelo al aire libre\",\n  \"probLluviaMax\": 20,\n  \"lluviaMaxMmHora\": 0.5,\n  \"vientoMaxKmh\": 25,\n  \"tempMinC\": 12\n}"
+              "raw": "{\n  \"nombre\": \"Pilates {{sufijo}}\",\n  \"descripcion\": \"Pilates de suelo al aire libre\",\n  \"probLluviaMax\": 20,\n  \"lluviaMaxMmHora\": 0.5,\n  \"vientoMaxKmh\": 25,\n  \"tempMinC\": 12\n}"
             }
           },
           "event": [
@@ -684,7 +742,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"nombre\": \"Costanera Río Suquía\",\n  \"direccion\": \"Costanera y Av. Poeta Lugones\",\n  \"latitud\": -31.4135,\n  \"longitud\": -64.1811,\n  \"alAireLibre\": true\n}"
+              "raw": "{\n  \"nombre\": \"Costanera Río Suquía {{sufijo}}\",\n  \"direccion\": \"Costanera y Av. Poeta Lugones\",\n  \"latitud\": -31.4135,\n  \"longitud\": -64.1811,\n  \"alAireLibre\": true\n}"
             }
           },
           "event": [
@@ -858,7 +916,7 @@
     },
     {
       "name": "03 - Contactos (ms-notificaciones)",
-      "description": "Chat de Telegram y consentimiento para avisos (F10, RN14). alumno2 no acepta Telegram para verificar notificaciones OMITIDAS.",
+      "description": "Consentimiento para avisos por Telegram (F10, RN14). Alumno 1, alumno 2 y profesor 1 aceptan; el alumno 3 NO acepta, para verificar las notificaciones OMITIDAS. Ningún request carga un chat: los chats reales se vinculan con el link (carpeta 11) y estos requests no los tocan. Si alguien todavía no está vinculado, la pestaña Visualize muestra su link.",
       "item": [
         {
           "name": "Alumno 1 acepta Telegram",
@@ -883,8 +941,9 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"telegramChatId\": \"{{telegramChatIdPrueba}}\",\n  \"aceptaTelegram\": true\n}"
-            }
+              "raw": "{\n  \"aceptaTelegram\": true\n}"
+            },
+            "description": "Acepta los avisos. No manda telegramChatId: si ya está vinculado, conserva su chat real; si no, la respuesta trae el link para vincularlo (pestaña Visualize)."
           },
           "event": [
             {
@@ -892,14 +951,27 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Acepta Telegram\", () => pm.expect(pm.response.json().aceptaTelegram).to.eql(true));",
+                  "pm.collectionVariables.set(\"subAlumno1\", pm.response.json().usuarioId);",
+                  "pm.collectionVariables.set(\"vinculadoAlumno1\", String(pm.response.json().vinculado));",
+                  "const r = pm.response.json();",
+                  "if (r.linkVinculacion) {",
+                  "    console.log(\"Link de Telegram para Alumno 1: \" + r.linkVinculacion);",
+                  "    pm.visualizer.set(`<div style=\"font-family:sans-serif;font-size:15px\"><p><b>Alumno 1</b>: abrí este link <b>en su celular</b> y tocá <b>Iniciar</b>.</p><p><a href=\"{{link}}\" target=\"_blank\">{{link}}</a></p><p>Vence: {{vence}} (sirve una sola vez)</p></div>`,",
+                  "        { link: r.linkVinculacion, vence: r.linkVence });",
+                  "} else {",
+                  "    pm.visualizer.set(`<div style=\"font-family:sans-serif;font-size:15px\"><p>{{msg}}</p></div>`, { msg: r.vinculado",
+                  "        ? \"Ya está vinculado (chat \" + r.telegramChatId + \"). Para cambiar de cuenta usá la carpeta 11.\"",
+                  "        : \"No vino link: revisá que TELEGRAM_PROVEEDOR=bot y que haya aceptado los avisos.\" });",
+                  "}"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Alumno 2 NO acepta Telegram",
+          "name": "Alumno 2 acepta Telegram",
           "request": {
             "method": "PUT",
             "header": [
@@ -921,8 +993,9 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"telegramChatId\": \"100000002\",\n  \"aceptaTelegram\": false\n}"
-            }
+              "raw": "{\n  \"aceptaTelegram\": true\n}"
+            },
+            "description": "Acepta los avisos. No manda telegramChatId: si ya está vinculado, conserva su chat real; si no, la respuesta trae el link para vincularlo (pestaña Visualize)."
           },
           "event": [
             {
@@ -930,14 +1003,27 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Acepta Telegram\", () => pm.expect(pm.response.json().aceptaTelegram).to.eql(true));",
+                  "pm.collectionVariables.set(\"subAlumno2\", pm.response.json().usuarioId);",
+                  "pm.collectionVariables.set(\"vinculadoAlumno2\", String(pm.response.json().vinculado));",
+                  "const r = pm.response.json();",
+                  "if (r.linkVinculacion) {",
+                  "    console.log(\"Link de Telegram para Alumno 2: \" + r.linkVinculacion);",
+                  "    pm.visualizer.set(`<div style=\"font-family:sans-serif;font-size:15px\"><p><b>Alumno 2</b>: abrí este link <b>en su celular</b> y tocá <b>Iniciar</b>.</p><p><a href=\"{{link}}\" target=\"_blank\">{{link}}</a></p><p>Vence: {{vence}} (sirve una sola vez)</p></div>`,",
+                  "        { link: r.linkVinculacion, vence: r.linkVence });",
+                  "} else {",
+                  "    pm.visualizer.set(`<div style=\"font-family:sans-serif;font-size:15px\"><p>{{msg}}</p></div>`, { msg: r.vinculado",
+                  "        ? \"Ya está vinculado (chat \" + r.telegramChatId + \"). Para cambiar de cuenta usá la carpeta 11.\"",
+                  "        : \"No vino link: revisá que TELEGRAM_PROVEEDOR=bot y que haya aceptado los avisos.\" });",
+                  "}"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Alumno 3 acepta Telegram",
+          "name": "Alumno 3 NO acepta Telegram",
           "request": {
             "method": "PUT",
             "header": [
@@ -959,8 +1045,9 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"telegramChatId\": \"{{telegramChatIdPrueba}}\",\n  \"aceptaTelegram\": true\n}"
-            }
+              "raw": "{\n  \"aceptaTelegram\": false\n}"
+            },
+            "description": "RN14: el alumno 3 rechaza los avisos. Sus notificaciones quedan OMITIDA aunque tenga un chat vinculado."
           },
           "event": [
             {
@@ -968,7 +1055,9 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"No acepta Telegram\", () => pm.expect(pm.response.json().aceptaTelegram).to.eql(false));",
+                  "pm.collectionVariables.set(\"subAlumno3\", pm.response.json().usuarioId);"
                 ]
               }
             }
@@ -997,8 +1086,9 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"telegramChatId\": \"{{telegramChatIdPrueba}}\",\n  \"aceptaTelegram\": true\n}"
-            }
+              "raw": "{\n  \"aceptaTelegram\": true\n}"
+            },
+            "description": "Acepta los avisos. No manda telegramChatId: si ya está vinculado, conserva su chat real; si no, la respuesta trae el link para vincularlo (pestaña Visualize)."
           },
           "event": [
             {
@@ -1006,7 +1096,20 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));"
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Acepta Telegram\", () => pm.expect(pm.response.json().aceptaTelegram).to.eql(true));",
+                  "pm.collectionVariables.set(\"subProfe1\", pm.response.json().usuarioId);",
+                  "pm.collectionVariables.set(\"vinculadoProfe1\", String(pm.response.json().vinculado));",
+                  "const r = pm.response.json();",
+                  "if (r.linkVinculacion) {",
+                  "    console.log(\"Link de Telegram para Profesor 1: \" + r.linkVinculacion);",
+                  "    pm.visualizer.set(`<div style=\"font-family:sans-serif;font-size:15px\"><p><b>Profesor 1</b>: abrí este link <b>en su celular</b> y tocá <b>Iniciar</b>.</p><p><a href=\"{{link}}\" target=\"_blank\">{{link}}</a></p><p>Vence: {{vence}} (sirve una sola vez)</p></div>`,",
+                  "        { link: r.linkVinculacion, vence: r.linkVence });",
+                  "} else {",
+                  "    pm.visualizer.set(`<div style=\"font-family:sans-serif;font-size:15px\"><p>{{msg}}</p></div>`, { msg: r.vinculado",
+                  "        ? \"Ya está vinculado (chat \" + r.telegramChatId + \"). Para cambiar de cuenta usá la carpeta 11.\"",
+                  "        : \"No vino link: revisá que TELEGRAM_PROVEEDOR=bot y que haya aceptado los avisos.\" });",
+                  "}"
                 ]
               }
             }
@@ -1036,7 +1139,8 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"telegramChatId\": \"no-es-un-numero\",\n  \"aceptaTelegram\": true\n}"
-            }
+            },
+            "description": "La validación rechaza el pedido antes de guardar: no cambia el chat real del alumno 1."
           },
           "event": [
             {
@@ -1075,42 +1179,10 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Acepta Telegram\", () => pm.expect(pm.response.json().aceptaTelegram).to.eql(true));"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Pedir link para vincular o cambiar de cuenta (proveedor log) -> 503",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "url": "{{baseUrl}}/contactos/mio/vinculacion",
-            "auth": {
-              "type": "bearer",
-              "bearer": [
-                {
-                  "key": "token",
-                  "value": "{{tokenAlumno1}}",
-                  "type": "string"
-                }
-              ]
-            },
-            "description": "Con TELEGRAM_PROVEEDOR=bot devuelve 200 con un linkVinculacion nuevo aunque ya esté vinculado (cambio de cuenta). En la demo (proveedor log) no hay bot real: 503 SERVICIO_NO_DISPONIBLE y el chat se carga a mano."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test(\"Status 503 sin bot real (200 con TELEGRAM_PROVEEDOR=bot)\", () => pm.expect(pm.response.code).to.be.oneOf([200, 503]));",
-                  "if (pm.response.code === 200) {",
-                  "    pm.test(\"Trae un link nuevo\", () => pm.expect(pm.response.json().linkVinculacion).to.include(\"https://t.me/\"));",
-                  "} else {",
-                  "    pm.test(\"Código SERVICIO_NO_DISPONIBLE\", () => pm.expect(pm.response.json().codigo).to.eql(\"SERVICIO_NO_DISPONIBLE\"));",
-                  "}"
+                  "pm.test(\"Acepta Telegram\", () => pm.expect(pm.response.json().aceptaTelegram).to.eql(true));",
+                  "const r = pm.response.json();",
+                  "pm.visualizer.set(`<div style=\"font-family:sans-serif;font-size:15px\"><p>Vinculado: <b>{{v}}</b></p><p>Chat: {{c}}</p></div>`,",
+                  "    { v: r.vinculado ? \"sí\" : \"no\", c: r.telegramChatId || \"(ninguno)\" });"
                 ]
               }
             }
@@ -1120,7 +1192,7 @@
     },
     {
       "name": "04 - Clases e inscripciones (ms-clases)",
-      "description": "Creación de clases con rutina y reglas de inscripción (F05, F08, F09, RN01, RN02, RN03, RN04, RN07). Crea las clases A, B y C (profesor 1, al aire libre) y E (profesor 2, techada).",
+      "description": "Creación de clases con rutina y reglas de inscripción (F05, F08, F09, RN01, RN02, RN03, RN04, RN07). Crea las clases A, B y C (profesor 1, al aire libre) y E (profesor 2, techada). Inscriptos: A = alumno 1 y alumno 3 (que no acepta avisos); B = alumno 2; C = alumno 1.",
       "item": [
         {
           "name": "Profesor 1 crea clase A (Yoga, Parque Sarmiento, cupo 2) -> 201",
@@ -1455,7 +1527,7 @@
           ]
         },
         {
-          "name": "Alumno 2 se inscribe en A -> 201",
+          "name": "Alumno 3 se inscribe en A -> 201",
           "request": {
             "method": "POST",
             "header": [],
@@ -1465,7 +1537,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{tokenAlumno2}}",
+                  "value": "{{tokenAlumno3}}",
                   "type": "string"
                 }
               ]
@@ -1484,7 +1556,7 @@
           ]
         },
         {
-          "name": "Alumno 3 se inscribe en A con cupo completo -> 409",
+          "name": "Alumno 2 se inscribe en A con cupo completo -> 409",
           "request": {
             "method": "POST",
             "header": [],
@@ -1494,7 +1566,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{tokenAlumno3}}",
+                  "value": "{{tokenAlumno2}}",
                   "type": "string"
                 }
               ]
@@ -1544,7 +1616,7 @@
           ]
         },
         {
-          "name": "Alumno 3 se inscribe en B -> 201",
+          "name": "Alumno 2 se inscribe en B -> 201",
           "request": {
             "method": "POST",
             "header": [],
@@ -1554,7 +1626,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{tokenAlumno3}}",
+                  "value": "{{tokenAlumno2}}",
                   "type": "string"
                 }
               ]
@@ -1573,7 +1645,7 @@
           ]
         },
         {
-          "name": "Alumno 3 se inscribe en C -> 201",
+          "name": "Alumno 2 se inscribe en C -> 201",
           "request": {
             "method": "POST",
             "header": [],
@@ -1583,7 +1655,7 @@
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{tokenAlumno3}}",
+                  "value": "{{tokenAlumno2}}",
                   "type": "string"
                 }
               ]
@@ -1596,24 +1668,24 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status 201\", () => pm.response.to.have.status(201));",
-                  "pm.collectionVariables.set(\"inscripcionA3C\", pm.response.json().id);"
+                  "pm.collectionVariables.set(\"inscripcionA2C\", pm.response.json().id);"
                 ]
               }
             }
           ]
         },
         {
-          "name": "Alumno 3 cancela su inscripción en C -> 200",
+          "name": "Alumno 2 cancela su inscripción en C -> 200",
           "request": {
             "method": "PATCH",
             "header": [],
-            "url": "{{baseUrl}}/inscripciones/{{inscripcionA3C}}/cancelacion",
+            "url": "{{baseUrl}}/inscripciones/{{inscripcionA2C}}/cancelacion",
             "auth": {
               "type": "bearer",
               "bearer": [
                 {
                   "key": "token",
-                  "value": "{{tokenAlumno3}}",
+                  "value": "{{tokenAlumno2}}",
                   "type": "string"
                 }
               ]
@@ -1685,7 +1757,7 @@
                 "type": "text/javascript",
                 "exec": [
                   "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
-                  "pm.test(\"Tiene 2 inscripciones activas\", () => pm.expect(pm.response.json().filter(i => i.estado === \"ACTIVA\").length).to.eql(2));"
+                  "// Solo las clases de esta corrida: la base puede tener inscripciones de corridas anteriores.\nconst deEstaCorrida = [pm.collectionVariables.get(\"claseA\"), pm.collectionVariables.get(\"claseC\")].map(Number);\npm.test(\"Inscripto en A y C, las dos ACTIVAS\", () => pm.expect(pm.response.json().filter(i => deEstaCorrida.includes(i.claseId) && i.estado === \"ACTIVA\").length).to.eql(2));"
                 ]
               }
             }
@@ -2002,7 +2074,7 @@
           ]
         },
         {
-          "name": "Notificaciones de A: una ENVIADA y una OMITIDA",
+          "name": "Notificaciones de A: alumno 1 recibe el aviso y alumno 3 OMITIDA",
           "request": {
             "method": "GET",
             "header": [],
@@ -2024,7 +2096,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// Las notificaciones se envían de forma asincrónica: esperar 3 s",
+                  "// Los avisos se mandan a Telegram en segundo plano: se esperan 3 s antes de consultar.",
                   "setTimeout(() => {}, 3000);"
                 ]
               }
@@ -2034,11 +2106,25 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
                   "const n = pm.response.json();",
-                  "pm.test(\"Alumno 1 notificado\", () => pm.expect(n.some(x => x.estado === \"ENVIADA\")).to.be.true);",
-                  "pm.test(\"Alumno 2 OMITIDA (no aceptó Telegram)\", () => pm.expect(n.some(x => x.estado === \"OMITIDA\")).to.be.true);",
-                  "pm.test(\"Sin duplicados por alumno\", () => { const k = n.map(x => x.eventoId + x.usuarioId); pm.expect(new Set(k).size).to.eql(k.length); });"
+                  "const v = k => pm.collectionVariables.get(k);",
+                  "// Si el usuario está vinculado y acepta, su aviso sale ENVIADA; si todavía no tocó Iniciar, OMITIDA (RN14).",
+                  "const esperado = vinc => v(vinc) === \"true\" ? \"ENVIADA\" : \"OMITIDA\";",
+                  "const de = (sub, tipo) => n.filter(x => x.usuarioId === v(sub) && (!tipo || x.tipo === tipo));",
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Sin duplicados por destinatario\", () => { const k = n.map(x => x.eventoId + x.usuarioId); pm.expect(new Set(k).size).to.eql(k.length); });",
+                  "pm.test(\"Ningún aviso FALLIDA\", () => pm.expect(n.filter(x => x.estado === \"FALLIDA\").map(x => x.ultimoError)).to.eql([]));",
+                  "pm.test(\"Alumno 1: aviso de reprogramación \" + esperado(\"vinculadoAlumno1\"), () => {",
+                  "    const a = de(\"subAlumno1\", \"REPROGRAMACION\");",
+                  "    pm.expect(a.length).to.eql(1);",
+                  "    pm.expect(a[0].estado).to.eql(esperado(\"vinculadoAlumno1\"));",
+                  "});",
+                  "pm.test(\"Alumno 3: OMITIDA porque no aceptó avisos\", () => {",
+                  "    const a = de(\"subAlumno3\", \"REPROGRAMACION\");",
+                  "    pm.expect(a.length).to.eql(1);",
+                  "    pm.expect(a[0].estado).to.eql(\"OMITIDA\");",
+                  "    pm.expect(a[0].ultimoError).to.include(\"no aceptó\");",
+                  "});"
                 ]
               }
             }
@@ -2226,7 +2312,7 @@
           ]
         },
         {
-          "name": "Notificaciones de B (alerta al profesor y aviso al alumno 3)",
+          "name": "Notificaciones de B (alerta al profesor 1 y aviso al alumno 2)",
           "request": {
             "method": "GET",
             "header": [],
@@ -2248,7 +2334,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// Las notificaciones se envían de forma asincrónica: esperar 3 s",
+                  "// Los avisos se mandan a Telegram en segundo plano: se esperan 3 s antes de consultar.",
                   "setTimeout(() => {}, 3000);"
                 ]
               }
@@ -2258,10 +2344,24 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
                   "const n = pm.response.json();",
-                  "pm.test(\"Hay alerta de riesgo\", () => pm.expect(n.some(x => x.tipo === \"ALERTA_RIESGO\")).to.be.true);",
-                  "pm.test(\"Hay aviso de reprogramación\", () => pm.expect(n.some(x => x.tipo === \"REPROGRAMACION\")).to.be.true);"
+                  "const v = k => pm.collectionVariables.get(k);",
+                  "// Si el usuario está vinculado y acepta, su aviso sale ENVIADA; si todavía no tocó Iniciar, OMITIDA (RN14).",
+                  "const esperado = vinc => v(vinc) === \"true\" ? \"ENVIADA\" : \"OMITIDA\";",
+                  "const de = (sub, tipo) => n.filter(x => x.usuarioId === v(sub) && (!tipo || x.tipo === tipo));",
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Sin duplicados por destinatario\", () => { const k = n.map(x => x.eventoId + x.usuarioId); pm.expect(new Set(k).size).to.eql(k.length); });",
+                  "pm.test(\"Ningún aviso FALLIDA\", () => pm.expect(n.filter(x => x.estado === \"FALLIDA\").map(x => x.ultimoError)).to.eql([]));",
+                  "pm.test(\"Profesor 1: alerta de riesgo \" + esperado(\"vinculadoProfe1\"), () => {",
+                  "    const a = de(\"subProfe1\", \"ALERTA_RIESGO\");",
+                  "    pm.expect(a.length).to.eql(1);",
+                  "    pm.expect(a[0].estado).to.eql(esperado(\"vinculadoProfe1\"));",
+                  "});",
+                  "pm.test(\"Alumno 2: aviso de reprogramación \" + esperado(\"vinculadoAlumno2\"), () => {",
+                  "    const a = de(\"subAlumno2\", \"REPROGRAMACION\");",
+                  "    pm.expect(a.length).to.eql(1);",
+                  "    pm.expect(a[0].estado).to.eql(esperado(\"vinculadoAlumno2\"));",
+                  "});"
                 ]
               }
             }
@@ -2404,7 +2504,7 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "// Las notificaciones se envían de forma asincrónica: esperar 3 s",
+                  "// Los avisos se mandan a Telegram en segundo plano: se esperan 3 s antes de consultar.",
                   "setTimeout(() => {}, 3000);"
                 ]
               }
@@ -2414,10 +2514,25 @@
               "script": {
                 "type": "text/javascript",
                 "exec": [
-                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
                   "const n = pm.response.json();",
-                  "pm.test(\"Aviso de suspensión sin fecha\", () => pm.expect(n.some(x => x.tipo === \"SIN_FECHA\")).to.be.true);",
-                  "pm.test(\"Aviso de reprogramación\", () => pm.expect(n.some(x => x.tipo === \"REPROGRAMACION\")).to.be.true);"
+                  "const v = k => pm.collectionVariables.get(k);",
+                  "// Si el usuario está vinculado y acepta, su aviso sale ENVIADA; si todavía no tocó Iniciar, OMITIDA (RN14).",
+                  "const esperado = vinc => v(vinc) === \"true\" ? \"ENVIADA\" : \"OMITIDA\";",
+                  "const de = (sub, tipo) => n.filter(x => x.usuarioId === v(sub) && (!tipo || x.tipo === tipo));",
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Sin duplicados por destinatario\", () => { const k = n.map(x => x.eventoId + x.usuarioId); pm.expect(new Set(k).size).to.eql(k.length); });",
+                  "pm.test(\"Ningún aviso FALLIDA\", () => pm.expect(n.filter(x => x.estado === \"FALLIDA\").map(x => x.ultimoError)).to.eql([]));",
+                  "pm.test(\"Alumno 1: aviso de suspensión sin fecha \" + esperado(\"vinculadoAlumno1\"), () => {",
+                  "    const a = de(\"subAlumno1\", \"SIN_FECHA\");",
+                  "    pm.expect(a.length).to.eql(1);",
+                  "    pm.expect(a[0].estado).to.eql(esperado(\"vinculadoAlumno1\"));",
+                  "});",
+                  "pm.test(\"Alumno 1: aviso de reprogramación \" + esperado(\"vinculadoAlumno1\"), () => {",
+                  "    const a = de(\"subAlumno1\", \"REPROGRAMACION\");",
+                  "    pm.expect(a.length).to.eql(1);",
+                  "    pm.expect(a[0].estado).to.eql(esperado(\"vinculadoAlumno1\"));",
+                  "});",
+                  "pm.test(\"Alumno 2 no recibe nada (canceló su inscripción en C)\", () => pm.expect(de(\"subAlumno2\").length).to.eql(0));"
                 ]
               }
             }
@@ -2606,6 +2721,193 @@
           ]
         },
         {
+          "name": "Profesor 1 cancela la clase A (aviso por Telegram a sus inscriptos) -> 200",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clases/{{claseA}}/cancelacion",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"El profesor no puede asistir\"\n}"
+            },
+            "description": "F07: cancela la clase y sus inscripciones. ms-clases avisa solo a los inscriptos de A (alumno 1 y alumno 3); al alumno 2, que está en otra clase, no le llega nada."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Estado CANCELADA\", () => pm.expect(pm.response.json().estado).to.eql(\"CANCELADA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Notificaciones de A: aviso de cancelación solo a sus inscriptos",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/notificaciones?claseId={{claseA}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Los avisos se mandan a Telegram en segundo plano: se esperan 3 s antes de consultar.",
+                  "setTimeout(() => {}, 3000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const n = pm.response.json();",
+                  "const v = k => pm.collectionVariables.get(k);",
+                  "// Si el usuario está vinculado y acepta, su aviso sale ENVIADA; si todavía no tocó Iniciar, OMITIDA (RN14).",
+                  "const esperado = vinc => v(vinc) === \"true\" ? \"ENVIADA\" : \"OMITIDA\";",
+                  "const de = (sub, tipo) => n.filter(x => x.usuarioId === v(sub) && (!tipo || x.tipo === tipo));",
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Sin duplicados por destinatario\", () => { const k = n.map(x => x.eventoId + x.usuarioId); pm.expect(new Set(k).size).to.eql(k.length); });",
+                  "pm.test(\"Ningún aviso FALLIDA\", () => pm.expect(n.filter(x => x.estado === \"FALLIDA\").map(x => x.ultimoError)).to.eql([]));",
+                  "pm.test(\"Alumno 1: aviso de cancelación \" + esperado(\"vinculadoAlumno1\"), () => {",
+                  "    const a = de(\"subAlumno1\", \"CANCELACION\");",
+                  "    pm.expect(a.length).to.eql(1);",
+                  "    pm.expect(a[0].estado).to.eql(esperado(\"vinculadoAlumno1\"));",
+                  "    pm.expect(a[0].mensaje).to.include(\"fue cancelada\");",
+                  "});",
+                  "pm.test(\"Alumno 3: OMITIDA porque no aceptó avisos\", () => pm.expect(de(\"subAlumno3\", \"CANCELACION\")[0].estado).to.eql(\"OMITIDA\"));",
+                  "pm.test(\"Alumno 2 no recibe nada (no está inscripto en A)\", () => pm.expect(de(\"subAlumno2\").length).to.eql(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Profesor 1 cancela la clase B (aviso por Telegram al alumno 2) -> 200",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/clases/{{claseB}}/cancelacion",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Se suspende el ciclo de Yoga\"\n}"
+            },
+            "description": "F07: la clase B (ya reprogramada en la carpeta 07) se cancela. El aviso le llega solo al alumno 2, su único inscripto; al alumno 1 no le llega nada."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Estado CANCELADA\", () => pm.expect(pm.response.json().estado).to.eql(\"CANCELADA\"));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Notificaciones de B: aviso de cancelación solo al alumno 2",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/notificaciones?claseId={{claseB}}",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Los avisos se mandan a Telegram en segundo plano: se esperan 3 s antes de consultar.",
+                  "setTimeout(() => {}, 3000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const n = pm.response.json();",
+                  "const v = k => pm.collectionVariables.get(k);",
+                  "// Si el usuario está vinculado y acepta, su aviso sale ENVIADA; si todavía no tocó Iniciar, OMITIDA (RN14).",
+                  "const esperado = vinc => v(vinc) === \"true\" ? \"ENVIADA\" : \"OMITIDA\";",
+                  "const de = (sub, tipo) => n.filter(x => x.usuarioId === v(sub) && (!tipo || x.tipo === tipo));",
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Sin duplicados por destinatario\", () => { const k = n.map(x => x.eventoId + x.usuarioId); pm.expect(new Set(k).size).to.eql(k.length); });",
+                  "pm.test(\"Ningún aviso FALLIDA\", () => pm.expect(n.filter(x => x.estado === \"FALLIDA\").map(x => x.ultimoError)).to.eql([]));",
+                  "pm.test(\"Alumno 2: aviso de cancelación \" + esperado(\"vinculadoAlumno2\"), () => {",
+                  "    const a = de(\"subAlumno2\", \"CANCELACION\");",
+                  "    pm.expect(a.length).to.eql(1);",
+                  "    pm.expect(a[0].estado).to.eql(esperado(\"vinculadoAlumno2\"));",
+                  "    pm.expect(a[0].mensaje).to.include(\"fue cancelada\");",
+                  "});",
+                  "pm.test(\"Alumno 1 no recibe nada (no está inscripto en B)\", () => pm.expect(de(\"subAlumno1\").length).to.eql(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
           "name": "Ejecutar evaluación general (equivale a la tarea programada)",
           "request": {
             "method": "POST",
@@ -2747,6 +3049,300 @@
           ]
         }
       ]
+    },
+    {
+      "name": "11 - Vincular Telegram (manual)",
+      "description": "Para vincular el celular de cada usuario con el bot. Ejecutar suelto (no hace falta el Runner): Send en el request del usuario, abrir el link de la pestaña Visualize en SU celular y tocar Iniciar. Si ya estaba vinculado, el link sirve para cambiar de cuenta: el chat anterior recibe avisos hasta que se toca Iniciar en el nuevo. El alumno 3 no está porque en la demo es el que no acepta avisos.",
+      "item": [
+        {
+          "name": "Link de Telegram para Alumno 1",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/contactos/mio/vinculacion",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Genera un link nuevo para vincular el celular de Alumno 1 (o cambiarlo por otro). Se puede ejecutar suelto: el pre-request saca un token nuevo y acepta los avisos. El link aparece en la pestaña Visualize."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 1) Token nuevo (así funciona aunque los de la carpeta 00 hayan vencido).",
+                  "// 2) Acepta los avisos sin cargar ningún chat; el link de la respuesta es el que vale.",
+                  "pm.sendRequest({",
+                  "    url: pm.variables.replaceIn(\"{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token\"),",
+                  "    method: \"POST\",",
+                  "    header: { \"Content-Type\": \"application/x-www-form-urlencoded\" },",
+                  "    body: { mode: \"urlencoded\", urlencoded: [",
+                  "        { key: \"grant_type\", value: \"password\" },",
+                  "        { key: \"client_id\", value: pm.variables.get(\"clientId\") },",
+                  "        { key: \"username\", value: pm.variables.get(\"alumno1User\") },",
+                  "        { key: \"password\", value: pm.variables.get(\"alumno1Pass\") }",
+                  "    ] }",
+                  "}, (err, res) => {",
+                  "    if (err) { console.log(err); return; }",
+                  "    const token = res.json().access_token;",
+                  "    pm.collectionVariables.set(\"tokenAlumno1\", token);",
+                  "    pm.sendRequest({",
+                  "        url: pm.variables.replaceIn(\"{{baseUrl}}/contactos/mio\"),",
+                  "        method: \"PUT\",",
+                  "        header: { \"Content-Type\": \"application/json\", \"Authorization\": \"Bearer \" + token },",
+                  "        body: { mode: \"raw\", raw: JSON.stringify({ aceptaTelegram: true }) }",
+                  "    }, (err2) => { if (err2) console.log(err2); });",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Trae el link\", () => pm.expect(pm.response.json().linkVinculacion).to.include(\"https://t.me/\"));",
+                  "const r = pm.response.json();",
+                  "if (r.linkVinculacion) {",
+                  "    console.log(\"Link de Telegram para Alumno 1: \" + r.linkVinculacion);",
+                  "    pm.visualizer.set(`<div style=\"font-family:sans-serif;font-size:15px\"><p><b>Alumno 1</b>: abrí este link <b>en su celular</b> y tocá <b>Iniciar</b>.</p><p><a href=\"{{link}}\" target=\"_blank\">{{link}}</a></p><p>Vence: {{vence}} (sirve una sola vez)</p></div>`,",
+                  "        { link: r.linkVinculacion, vence: r.linkVence });",
+                  "} else {",
+                  "    pm.visualizer.set(`<div style=\"font-family:sans-serif;font-size:15px\"><p>{{msg}}</p></div>`, { msg: r.vinculado",
+                  "        ? \"Ya está vinculado (chat \" + r.telegramChatId + \"). Para cambiar de cuenta usá la carpeta 11.\"",
+                  "        : \"No vino link: revisá que TELEGRAM_PROVEEDOR=bot y que haya aceptado los avisos.\" });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Link de Telegram para Alumno 2",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/contactos/mio/vinculacion",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenAlumno2}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Genera un link nuevo para vincular el celular de Alumno 2 (o cambiarlo por otro). Se puede ejecutar suelto: el pre-request saca un token nuevo y acepta los avisos. El link aparece en la pestaña Visualize."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 1) Token nuevo (así funciona aunque los de la carpeta 00 hayan vencido).",
+                  "// 2) Acepta los avisos sin cargar ningún chat; el link de la respuesta es el que vale.",
+                  "pm.sendRequest({",
+                  "    url: pm.variables.replaceIn(\"{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token\"),",
+                  "    method: \"POST\",",
+                  "    header: { \"Content-Type\": \"application/x-www-form-urlencoded\" },",
+                  "    body: { mode: \"urlencoded\", urlencoded: [",
+                  "        { key: \"grant_type\", value: \"password\" },",
+                  "        { key: \"client_id\", value: pm.variables.get(\"clientId\") },",
+                  "        { key: \"username\", value: pm.variables.get(\"alumno2User\") },",
+                  "        { key: \"password\", value: pm.variables.get(\"alumno2Pass\") }",
+                  "    ] }",
+                  "}, (err, res) => {",
+                  "    if (err) { console.log(err); return; }",
+                  "    const token = res.json().access_token;",
+                  "    pm.collectionVariables.set(\"tokenAlumno2\", token);",
+                  "    pm.sendRequest({",
+                  "        url: pm.variables.replaceIn(\"{{baseUrl}}/contactos/mio\"),",
+                  "        method: \"PUT\",",
+                  "        header: { \"Content-Type\": \"application/json\", \"Authorization\": \"Bearer \" + token },",
+                  "        body: { mode: \"raw\", raw: JSON.stringify({ aceptaTelegram: true }) }",
+                  "    }, (err2) => { if (err2) console.log(err2); });",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Trae el link\", () => pm.expect(pm.response.json().linkVinculacion).to.include(\"https://t.me/\"));",
+                  "const r = pm.response.json();",
+                  "if (r.linkVinculacion) {",
+                  "    console.log(\"Link de Telegram para Alumno 2: \" + r.linkVinculacion);",
+                  "    pm.visualizer.set(`<div style=\"font-family:sans-serif;font-size:15px\"><p><b>Alumno 2</b>: abrí este link <b>en su celular</b> y tocá <b>Iniciar</b>.</p><p><a href=\"{{link}}\" target=\"_blank\">{{link}}</a></p><p>Vence: {{vence}} (sirve una sola vez)</p></div>`,",
+                  "        { link: r.linkVinculacion, vence: r.linkVence });",
+                  "} else {",
+                  "    pm.visualizer.set(`<div style=\"font-family:sans-serif;font-size:15px\"><p>{{msg}}</p></div>`, { msg: r.vinculado",
+                  "        ? \"Ya está vinculado (chat \" + r.telegramChatId + \"). Para cambiar de cuenta usá la carpeta 11.\"",
+                  "        : \"No vino link: revisá que TELEGRAM_PROVEEDOR=bot y que haya aceptado los avisos.\" });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Link de Telegram para Profesor 1",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/contactos/mio/vinculacion",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe1}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Genera un link nuevo para vincular el celular de Profesor 1 (o cambiarlo por otro). Se puede ejecutar suelto: el pre-request saca un token nuevo y acepta los avisos. El link aparece en la pestaña Visualize."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 1) Token nuevo (así funciona aunque los de la carpeta 00 hayan vencido).",
+                  "// 2) Acepta los avisos sin cargar ningún chat; el link de la respuesta es el que vale.",
+                  "pm.sendRequest({",
+                  "    url: pm.variables.replaceIn(\"{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token\"),",
+                  "    method: \"POST\",",
+                  "    header: { \"Content-Type\": \"application/x-www-form-urlencoded\" },",
+                  "    body: { mode: \"urlencoded\", urlencoded: [",
+                  "        { key: \"grant_type\", value: \"password\" },",
+                  "        { key: \"client_id\", value: pm.variables.get(\"clientId\") },",
+                  "        { key: \"username\", value: pm.variables.get(\"profe1User\") },",
+                  "        { key: \"password\", value: pm.variables.get(\"profe1Pass\") }",
+                  "    ] }",
+                  "}, (err, res) => {",
+                  "    if (err) { console.log(err); return; }",
+                  "    const token = res.json().access_token;",
+                  "    pm.collectionVariables.set(\"tokenProfe1\", token);",
+                  "    pm.sendRequest({",
+                  "        url: pm.variables.replaceIn(\"{{baseUrl}}/contactos/mio\"),",
+                  "        method: \"PUT\",",
+                  "        header: { \"Content-Type\": \"application/json\", \"Authorization\": \"Bearer \" + token },",
+                  "        body: { mode: \"raw\", raw: JSON.stringify({ aceptaTelegram: true }) }",
+                  "    }, (err2) => { if (err2) console.log(err2); });",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Trae el link\", () => pm.expect(pm.response.json().linkVinculacion).to.include(\"https://t.me/\"));",
+                  "const r = pm.response.json();",
+                  "if (r.linkVinculacion) {",
+                  "    console.log(\"Link de Telegram para Profesor 1: \" + r.linkVinculacion);",
+                  "    pm.visualizer.set(`<div style=\"font-family:sans-serif;font-size:15px\"><p><b>Profesor 1</b>: abrí este link <b>en su celular</b> y tocá <b>Iniciar</b>.</p><p><a href=\"{{link}}\" target=\"_blank\">{{link}}</a></p><p>Vence: {{vence}} (sirve una sola vez)</p></div>`,",
+                  "        { link: r.linkVinculacion, vence: r.linkVence });",
+                  "} else {",
+                  "    pm.visualizer.set(`<div style=\"font-family:sans-serif;font-size:15px\"><p>{{msg}}</p></div>`, { msg: r.vinculado",
+                  "        ? \"Ya está vinculado (chat \" + r.telegramChatId + \"). Para cambiar de cuenta usá la carpeta 11.\"",
+                  "        : \"No vino link: revisá que TELEGRAM_PROVEEDOR=bot y que haya aceptado los avisos.\" });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Link de Telegram para Profesor 2",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/contactos/mio/vinculacion",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{tokenProfe2}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "description": "Genera un link nuevo para vincular el celular de Profesor 2 (o cambiarlo por otro). Se puede ejecutar suelto: el pre-request saca un token nuevo y acepta los avisos. El link aparece en la pestaña Visualize."
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// 1) Token nuevo (así funciona aunque los de la carpeta 00 hayan vencido).",
+                  "// 2) Acepta los avisos sin cargar ningún chat; el link de la respuesta es el que vale.",
+                  "pm.sendRequest({",
+                  "    url: pm.variables.replaceIn(\"{{keycloakUrl}}/realms/{{realm}}/protocol/openid-connect/token\"),",
+                  "    method: \"POST\",",
+                  "    header: { \"Content-Type\": \"application/x-www-form-urlencoded\" },",
+                  "    body: { mode: \"urlencoded\", urlencoded: [",
+                  "        { key: \"grant_type\", value: \"password\" },",
+                  "        { key: \"client_id\", value: pm.variables.get(\"clientId\") },",
+                  "        { key: \"username\", value: pm.variables.get(\"profe2User\") },",
+                  "        { key: \"password\", value: pm.variables.get(\"profe2Pass\") }",
+                  "    ] }",
+                  "}, (err, res) => {",
+                  "    if (err) { console.log(err); return; }",
+                  "    const token = res.json().access_token;",
+                  "    pm.collectionVariables.set(\"tokenProfe2\", token);",
+                  "    pm.sendRequest({",
+                  "        url: pm.variables.replaceIn(\"{{baseUrl}}/contactos/mio\"),",
+                  "        method: \"PUT\",",
+                  "        header: { \"Content-Type\": \"application/json\", \"Authorization\": \"Bearer \" + token },",
+                  "        body: { mode: \"raw\", raw: JSON.stringify({ aceptaTelegram: true }) }",
+                  "    }, (err2) => { if (err2) console.log(err2); });",
+                  "});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"Trae el link\", () => pm.expect(pm.response.json().linkVinculacion).to.include(\"https://t.me/\"));",
+                  "const r = pm.response.json();",
+                  "if (r.linkVinculacion) {",
+                  "    console.log(\"Link de Telegram para Profesor 2: \" + r.linkVinculacion);",
+                  "    pm.visualizer.set(`<div style=\"font-family:sans-serif;font-size:15px\"><p><b>Profesor 2</b>: abrí este link <b>en su celular</b> y tocá <b>Iniciar</b>.</p><p><a href=\"{{link}}\" target=\"_blank\">{{link}}</a></p><p>Vence: {{vence}} (sirve una sola vez)</p></div>`,",
+                  "        { link: r.linkVinculacion, vence: r.linkVence });",
+                  "} else {",
+                  "    pm.visualizer.set(`<div style=\"font-family:sans-serif;font-size:15px\"><p>{{msg}}</p></div>`, { msg: r.vinculado",
+                  "        ? \"Ya está vinculado (chat \" + r.telegramChatId + \"). Para cambiar de cuenta usá la carpeta 11.\"",
+                  "        : \"No vino link: revisá que TELEGRAM_PROVEEDOR=bot y que haya aceptado los avisos.\" });",
+                  "}"
+                ]
+              }
+            }
+          ]
+        }
+      ]
     }
   ],
   "variable": [
@@ -2788,10 +3384,6 @@
     },
     {
       "key": "claseE",
-      "value": ""
-    },
-    {
-      "key": "inscripcionA3C",
       "value": ""
     },
     {
@@ -2856,6 +3448,42 @@
     },
     {
       "key": "pronHasta",
+      "value": ""
+    },
+    {
+      "key": "inscripcionA2C",
+      "value": ""
+    },
+    {
+      "key": "subAlumno1",
+      "value": ""
+    },
+    {
+      "key": "subAlumno2",
+      "value": ""
+    },
+    {
+      "key": "subAlumno3",
+      "value": ""
+    },
+    {
+      "key": "subProfe1",
+      "value": ""
+    },
+    {
+      "key": "vinculadoAlumno1",
+      "value": ""
+    },
+    {
+      "key": "vinculadoAlumno2",
+      "value": ""
+    },
+    {
+      "key": "vinculadoProfe1",
+      "value": ""
+    },
+    {
+      "key": "sufijo",
       "value": ""
     }
   ]

@@ -23,7 +23,7 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("ClimaFit · ms-notificaciones")
                         .version("1.0.0")
-                        .description("Contactos y consentimiento, y avisos por WhatsApp con reintentos y sin duplicados."))
+                        .description("Contactos y consentimiento, y avisos por Telegram con reintentos y sin duplicados."))
                 .components(new Components().addSecuritySchemes(ESQUEMA, new SecurityScheme()
                         .type(SecurityScheme.Type.HTTP)
                         .scheme("bearer")

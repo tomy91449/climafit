@@ -27,10 +27,12 @@ La propuesta completa (funcionalidades F01–F15, reglas RN01–RN16, diagramas 
 ## Levantar todo con Docker
 
 ```bash
-cp .env.example .env          # los valores por defecto sirven
+cp .env.example .env          # y completar TELEGRAM_BOT_TOKEN (ver "Avisos por Telegram")
 docker compose up -d --build  # la primera vez tarda unos minutos
 docker compose ps             # esperar a que todo diga (healthy)
 ```
+
+Sin `TELEGRAM_BOT_TOKEN`, ms-notificaciones no arranca. Para probar sin bot, poner `TELEGRAM_PROVEEDOR=log`.
 
 - API: `http://localhost:8080/api/...`
 - Swagger UI unificado: `http://localhost:8080/swagger-ui.html` (arriba a la derecha se elige el microservicio;
@@ -75,8 +77,8 @@ y usarlo como `Authorization: Bearer <access_token>`.
 
 `ms-notificaciones` tiene dos proveedores, que se eligen con `TELEGRAM_PROVEEDOR` en el `.env`:
 
-- `log` (por defecto): no manda nada, escribe el mensaje en el log y la notificación queda `ENVIADA`. Es el que se usa en la demo.
-- `bot`: manda el aviso real con la Bot API de Telegram (`sendMessage`).
+- `bot` (por defecto, el de la demo): manda el aviso real con la Bot API de Telegram (`sendMessage`). Necesita `TELEGRAM_BOT_TOKEN`.
+- `log`: no manda nada, escribe el mensaje en el log y la notificación queda `ENVIADA`. Sirve para programar sin bot.
 
 Antes los avisos iban por WhatsApp. Se cambió a Telegram porque el proveedor de WhatsApp, con una cuenta de prueba, rechazaba todos los envíos de texto libre. La Bot API de Telegram es gratuita y no tiene ese límite.
 
@@ -98,8 +100,24 @@ Detalles:
 - Si el usuario rechaza los avisos (`aceptaTelegram: false`), el link pendiente deja de servir.
 - Los mensajes del bot se leen con `getUpdates` cada 3 segundos: no hace falta una URL pública ni webhook. Solo funciona con `TELEGRAM_PROVEEDOR=bot`.
 - Mientras el usuario no toca Iniciar, sus notificaciones quedan `OMITIDA` con el motivo "no tiene su chat de Telegram registrado" (RN14).
-- Para pruebas se puede seguir cargando el chat a mano: `{"telegramChatId": "123456789", "aceptaTelegram": true}`.
-  Con `TELEGRAM_PROVEEDOR=log` no hay bot real, así que no se genera link: el chat se carga siempre así.
+- El chat también se puede cargar a mano: `{"telegramChatId": "123456789", "aceptaTelegram": true}`.
+  **Ojo:** eso reemplaza el chat vinculado por el link. Con `TELEGRAM_PROVEEDOR=log` no hay bot real ni link, así que es la única forma.
+
+### Vincular celulares desde Postman
+
+La colección está armada para el bot real y ningún request carga chats inventados:
+
+- **11 - Vincular Telegram (manual):** un request por usuario (alumno 1, alumno 2, profesor 1, profesor 2). Se ejecuta suelto,
+  sin el Runner: saca un token nuevo, acepta los avisos y devuelve el link. El link aparece en la pestaña **Visualize**
+  de la respuesta; se abre en el celular de esa persona y se toca **Iniciar**.
+- **03 - Contactos:** alumno 1, alumno 2 y profesor 1 aceptan los avisos sin tocar su chat. El **alumno 3 no acepta**:
+  sus avisos quedan `OMITIDA` (RN14).
+- **Inscriptos en la demo:** clase A = alumno 1 y alumno 3; clase B = alumno 2; clase C = alumno 1. En la carpeta 09 el
+  profesor 1 cancela la clase A (el aviso le llega solo al alumno 1) y después la clase B (le llega solo al alumno 2).
+- Los tests de avisos esperan `ENVIADA` para quien tiene el celular vinculado y `OMITIDA` para quien todavía no tocó
+  Iniciar, así que la colección pasa aunque falte vincular a alguien.
+- Correr la colección completa manda unos 6 a 8 mensajes reales a los celulares vinculados.
+- Las vinculaciones quedan en la base: `docker compose down -v` las borra y hay que vincular de nuevo.
 
 ### Cambiar de cuenta o bot bloqueado
 
