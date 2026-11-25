@@ -1,24 +1,47 @@
-# ClimaFit — despliegue completo.
-#   cp .env.example .env
-#   docker compose up -d --build
+# =====================================================================================
+# ClimaFit — despliegue completo con Docker Compose.
 #
-# Solo se publican al host el API Gateway (8080) y Keycloak (8090).
+# Para principiantes:
+#  - Docker corre cada parte del sistema en su propio CONTENEDOR (una "mini computadora" aislada).
+#  - Este archivo es el PLANO: dice qué contenedores hay, cómo se configuran, en qué orden
+#    arrancan y cómo se conectan entre sí. Con un solo comando se levanta todo:
+#
+#      cp .env.example .env          (una sola vez: crea el archivo de configuración)
+#      docker compose up -d --build  (construye las imágenes y arranca los 9 contenedores)
+#      docker compose ps             (ver el estado: esperar a que todos digan "healthy")
+#      docker compose down           (apagar todo; con -v también BORRA las bases de datos)
+#
+#  - Los valores ${NOMBRE} se leen del archivo .env (contraseñas, token del bot, etc.).
+#
+# Solo se publican al host (tu máquina) el API Gateway (8080) y Keycloak (8090).
 # Los microservicios y las dos instancias de PostgreSQL quedan en la red interna "climafit" (trusted zone):
 # las bases NO tienen puerto publicado. Para programar desde el IDE ver docker-compose.dev.yml.
+# =====================================================================================
 
+# Nombre del proyecto: los contenedores se llaman climafit-<servicio>-1.
 name: climafit
 
+# ---- Bloque común para los 5 servicios Java (4 microservicios + gateway) ----
+# "x-..." es un bloque reutilizable: con &servicio-spring se le pone nombre y más abajo
+# cada servicio lo copia con "<<: *servicio-spring". Así no se repite lo mismo 5 veces.
 x-servicio-spring: &servicio-spring
+  # Si el contenedor se cae, Docker lo vuelve a arrancar solo (salvo que lo frenemos a mano).
   restart: unless-stopped
+  # Todos en la misma red privada: se encuentran por nombre (http://ms-clases:8080).
   networks: [climafit]
+  # Variables de entorno: configuración que el programa lee al arrancar.
   environment: &env-spring
     TZ: ${TZ}
+    # Adentro de su contenedor, cada servicio Java escucha en el puerto 8080.
     SERVER_PORT: 8080
+    # Perfiles de Spring: "docker" (direcciones de la red interna) y "demo" (simulación del clima).
     SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
     # Los tokens se piden en localhost:8090 (desde Postman) => ese es su emisor ("iss").
     KEYCLOAK_ISSUER_URI: http://localhost:8090/realms/climafit
     # Pero las claves públicas se descargan por la red interna de Docker.
     KEYCLOAK_JWKS_URI: http://keycloak:8080/realms/climafit/protocol/openid-connect/certs
+  # HEALTHCHECK: cada 10 s Docker pregunta "¿estás bien?" a /actuator/health.
+  # Mientras no responda OK, el contenedor figura como "starting"; después, "healthy".
   healthcheck:
     test: ["CMD", "curl", "-fs", "http://localhost:8080/actuator/health"]
     interval: 10s
@@ -26,8 +49,12 @@ x-servicio-spring: &servicio-spring
     retries: 15
     start_period: 30s
 
+# ---- Los contenedores ----
 services:
+
+  # Base de datos PostgreSQL para ms-clases, ms-notificaciones y Keycloak (cada uno con su base).
   postgres:
+    # image = imagen ya armada que se descarga de internet (no se construye).
     image: postgres:17
     restart: unless-stopped
     environment:
@@ -36,10 +63,15 @@ services:
       CLASES_DB_PASSWORD: ${CLASES_DB_PASSWORD}
       NOTIFICACIONES_DB_PASSWORD: ${NOTIFICACIONES_DB_PASSWORD}
       KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+    # volumes:
+    #  - postgres-data: carpeta donde quedan guardados los datos; sobrevive aunque se borre el contenedor.
+    #  - init.sh: script que crea las bases y los usuarios la primera vez (ver infra/postgres/init.sh).
+    #    ":ro" = solo lectura.
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ./infra/postgres/init.sh:/docker-entrypoint-initdb.d/init.sh:ro
     networks: [climafit]
+    # ¿Está lista la base? pg_isready responde cuando acepta conexiones.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -66,14 +98,18 @@ services:
       timeout: 5s
       retries: 20
 
+  # Keycloak: el servidor de usuarios y contraseñas. Entrega los tokens JWT con los roles
+  # (ADMIN, PROFESOR, ALUMNO, SERVICIO). Consola de administración: http://localhost:8090 (admin/admin).
   keycloak:
     image: quay.io/keycloak/keycloak:26.4
+    # start-dev = modo desarrollo. --import-realm = carga usuarios y roles desde el archivo del realm.
     command: ["start-dev", "--import-realm"]
     restart: unless-stopped
     environment:
       TZ: ${TZ}
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      # Keycloak guarda sus datos en la base keycloak_db del contenedor "postgres".
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak_db
       KC_DB_USERNAME: keycloak
@@ -85,10 +121,14 @@ services:
       KC_HEALTH_ENABLED: "true"
       # Se reemplaza dentro del realm importado (${CLIENTE_SERVICIOS_SECRET}).
       CLIENTE_SERVICIOS_SECRET: ${CLIENTE_SERVICIOS_SECRET}
+    # Se le pasa el archivo con el realm "climafit" (usuarios de prueba, roles y clientes).
     volumes:
       - ./infra/keycloak/climafit-realm.json:/opt/keycloak/data/import/climafit-realm.json:ro
+    # ports "8090:8080" = el puerto 8090 de tu máquina lleva al 8080 del contenedor.
+    # Es uno de los dos únicos puertos abiertos hacia afuera (Postman pide los tokens acá).
     ports: ["8090:8080"]
     networks: [climafit]
+    # depends_on = no arranca hasta que "postgres" esté healthy.
     depends_on:
       postgres: { condition: service_healthy }
     healthcheck:
@@ -99,6 +139,13 @@ services:
       retries: 30
       start_period: 30s
 
+  # ---- Los 4 microservicios ----
+  # "<<: *servicio-spring" copia el bloque común de arriba (red, healthcheck, reinicio).
+  # "build" = la imagen se CONSTRUYE con el Dockerfile de cada carpeta. context: . = desde la raíz
+  # del repo, para que el Dockerfile pueda copiar también climafit-commons.
+  # Ninguno tiene "ports": no se pueden alcanzar desde afuera, solo a través del gateway.
+
+  # Catálogo: actividades, espacios, ejercicios. Usa la base actividades_db.
   ms-actividades:
     <<: *servicio-spring
     build: { context: ., dockerfile: ms-actividades/Dockerfile }
@@ -111,6 +158,7 @@ services:
       postgres-actividades: { condition: service_healthy }
       keycloak: { condition: service_healthy }
 
+  # Clases e inscripciones. Usa la base clases_db y llama a los otros servicios con un token de servicio.
   ms-clases:
     <<: *servicio-spring
     build: { context: ., dockerfile: ms-clases/Dockerfile }
@@ -124,12 +172,14 @@ services:
       postgres: { condition: service_healthy }
       keycloak: { condition: service_healthy }
 
+  # Pronóstico del clima (Open-Meteo). No tiene base de datos.
   ms-clima:
     <<: *servicio-spring
     build: { context: ., dockerfile: ms-clima/Dockerfile }
     depends_on:
       keycloak: { condition: service_healthy }
 
+  # Avisos por Telegram. Usa la base notificaciones_db y el token del bot (del .env).
   ms-notificaciones:
     <<: *servicio-spring
     build: { context: ., dockerfile: ms-notificaciones/Dockerfile }
@@ -144,6 +194,10 @@ services:
       postgres: { condition: service_healthy }
       keycloak: { condition: service_healthy }
 
+  # ---- API Gateway: la ÚNICA puerta de entrada a la API ----
+  # Recibe todo en http://localhost:8080/api/... y lo reenvía al microservicio que corresponde.
+  # Las variables MS_*_URL le dicen dónde está cada microservicio dentro de la red de Docker
+  # (las usa api-gateway/src/main/resources/application.yml).
   api-gateway:
     <<: *servicio-spring
     build: { context: ., dockerfile: api-gateway/Dockerfile }
@@ -153,7 +207,9 @@ services:
       MS_CLASES_URL: http://ms-clases:8080
       MS_CLIMA_URL: http://ms-clima:8080
       MS_NOTIFICACIONES_URL: http://ms-notificaciones:8080
+    # El puerto 8080 de tu máquina lleva al gateway. Es el que usan Postman y el Swagger.
     ports: ["8080:8080"]
+    # Arranca último: espera a Keycloak y a que los 4 microservicios estén healthy.
     depends_on:
       keycloak: { condition: service_healthy }
       ms-actividades: { condition: service_healthy }
@@ -161,9 +217,11 @@ services:
       ms-clima: { condition: service_healthy }
       ms-notificaciones: { condition: service_healthy }
 
+# La red privada donde viven todos los contenedores (trusted zone).
 networks:
   climafit:
 
+# Los "discos" donde PostgreSQL guarda los datos. "docker compose down -v" los borra.
 volumes:
   postgres-data:
   postgres-actividades-data:

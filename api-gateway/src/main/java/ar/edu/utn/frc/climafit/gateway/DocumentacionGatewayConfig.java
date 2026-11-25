@@ -14,6 +14,10 @@ import reactor.core.publisher.Mono;
 /**
  * Rutas para el Swagger UI unificado del gateway (propuesta, sección 10).
  * <p>
+ * Explicado simple: cada microservicio describe su propia API en un documento (OpenAPI, en
+ * {@code /v3/api-docs}). Esta clase hace que el gateway junte los 4 documentos en una sola página:
+ * {@code http://localhost:8080/swagger-ui.html}, donde arriba a la derecha se elige el microservicio.
+ * <p>
  * {@code GET /docs/<servicio>} devuelve el {@code /v3/api-docs} de ese microservicio, cambiando su lista
  * de "servers" por {@code /api}. Así, "Try it out" en el Swagger del gateway llama a
  * {@code http://localhost:8080/api/...}: el pedido pasa por el gateway y por su Security Filter, igual
@@ -25,6 +29,12 @@ public class DocumentacionGatewayConfig {
     /** Prefijo público de la API en el gateway. */
     static final String PREFIJO_API = "/api";
 
+    /**
+     * Define 4 rutas extra (además de las de application.yml), una por microservicio:
+     * /docs/actividades, /docs/clases, /docs/clima y /docs/notificaciones.
+     * Las direcciones de cada microservicio salen de variables de entorno (las pone docker-compose.yml);
+     * si no están, se usan las de localhost para correrlo desde el IDE.
+     */
     @Bean
     public RouteLocator rutasDocumentacion(RouteLocatorBuilder rutas, ObjectMapper objectMapper,
                                            @Value("${MS_ACTIVIDADES_URL:http://localhost:8081}") String actividades,
@@ -43,6 +53,7 @@ public class DocumentacionGatewayConfig {
                 .build();
     }
 
+    /** Lo que se le hace a cada pedido de documentación: se pide /v3/api-docs y se corrige la respuesta. */
     private static GatewayFilterSpec documentacion(GatewayFilterSpec filtros, ObjectMapper objectMapper) {
         return filtros
                 .setPath("/v3/api-docs")

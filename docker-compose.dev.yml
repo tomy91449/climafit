@@ -1,11 +1,17 @@
 # SOLO para programar desde el IDE (microservicio corriendo en IntelliJ contra las bases de Docker).
 # En el despliegue normal (docker compose up) las bases NO tienen puerto publicado.
 #
+# Para principiantes: este archivo NO se usa solo. Se "suma" encima de docker-compose.yml y le agrega
+# los puertos de las bases de datos, para que un programa corriendo en tu máquina (fuera de Docker)
+# pueda conectarse a ellas. Se usa así:
+#
 #   docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d postgres postgres-actividades keycloak
 #
 # Los puertos se publican solo en 127.0.0.1: se llega desde esta máquina, no desde la red.
 services:
   postgres:
+    # 5432 de tu máquina -> 5432 del contenedor (clases_db, notificaciones_db, keycloak_db).
     ports: ["127.0.0.1:5432:5432"]
   postgres-actividades:
+    # 5433 de tu máquina -> 5432 del contenedor (actividades_db). Otro número para no chocar con el de arriba.
     ports: ["127.0.0.1:5433:5432"]

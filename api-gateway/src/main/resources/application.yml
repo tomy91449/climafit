@@ -1,9 +1,33 @@
+# =====================================================================================
+# Configuración del API Gateway.
+# Este archivo (formato YAML: la sangría con espacios importa) le dice a Spring Boot cómo
+# arrancar el gateway: en qué puerto, cómo validar los tokens, a qué microservicio mandar
+# cada pedido y cómo armar el Swagger.
+#
+# La forma ${NOMBRE:valor} significa: "usá la variable de entorno NOMBRE; si no existe, usá valor".
+# En Docker esas variables las pone docker-compose.yml; en el IDE se usan los valores por defecto
+# (localhost), que apuntan a los microservicios corriendo en tu máquina.
+# =====================================================================================
+
+# Puerto donde escucha el gateway. Desde afuera siempre se entra por http://localhost:8080
 server:
   port: ${SERVER_PORT:8080}
 
 spring:
   application:
+    # Nombre del servicio (aparece en los logs).
     name: api-gateway
+  # De climafit-commons el gateway usa las clases (roles, conversor de Keycloak, formato de error).
+  # El cliente HTTP entre servicios no lo necesita: no llama a ningún microservicio por su cuenta,
+  # solo reenvía pedidos. Por eso se apaga esa configuración automática de la librería.
+  autoconfigure:
+    exclude: ar.edu.utn.frc.climafit.commons.config.ClimafitHttpAutoConfiguration
+  # ---- Validación de tokens (Keycloak) ----
+  # Cada pedido trae un token JWT que entregó Keycloak. Para saber si es auténtico:
+  #  - issuer-uri: quién tiene que haber emitido el token (el "realm" climafit de Keycloak).
+  #  - jwk-set-uri: de dónde se descargan las claves públicas para revisar la firma del token.
+  # En Docker son distintas: el token se pide desde tu máquina (localhost:8090), pero las claves
+  # se descargan por la red interna de Docker (keycloak:8080). Ver docker-compose.yml.
   security:
     oauth2:
       resourceserver:
@@ -18,37 +42,47 @@ spring:
           # (la red de Docker y localhost). Sin esto, el gateway no envía X-Forwarded-Prefix=/api
           # y los microservicios arman URLs internas (ej. Location: http://ms-actividades:8080/...).
           trusted-proxies: '10\..*|172\.(1[6-9]|2[0-9]|3[01])\..*|192\.168\..*|127\..*|0:0:0:0:0:0:0:1'
+          # ---- Tiempos máximos de espera ----
           # Si un microservicio no acepta la conexión en 2 s o no responde en 60 s, el gateway
           # corta y responde 503 SERVICIO_NO_DISPONIBLE (ManejadorErroresGateway).
           # 60 s porque la evaluación general (POST /api/clases/evaluaciones) consulta el clima de varias clases.
           httpclient:
             connect-timeout: ${GATEWAY_TIMEOUT_CONEXION_MS:2000}
             response-timeout: ${GATEWAY_TIMEOUT_RESPUESTA:60s}
-          # Rutas públicas -> microservicio. StripPrefix=1 saca el "/api":
-          #   GET /api/actividades/1  ->  GET http://ms-actividades:8080/actividades/1
+          # ---- RUTAS: a qué microservicio va cada pedido ----
+          # Cada ruta tiene:
+          #  - id: un nombre (aparece en los errores 503, ej. "El servicio ms-clases no está disponible").
+          #  - uri: la dirección del microservicio (en Docker, su nombre de contenedor: http://ms-clases:8080).
+          #  - predicates / Path: qué direcciones entran por esta ruta.
+          #  - filters / StripPrefix=1: le saca la primera parte ("/api") antes de reenviar:
+          #      GET /api/actividades/1  ->  GET http://ms-actividades:8080/actividades/1
           # Las rutas /internal/** NO están acá: desde afuera no existen (404). Solo se llaman
           # dentro de la red de Docker, entre microservicios y con token de servicio.
           # Además BloqueoRutasInternasFilter corta /api/xxx/../internal/... y similares.
           # Quién puede usar cada ruta (rol y método) está en SeguridadGatewayConfig.
           routes:
+            # Catálogo: actividades, espacios y ejercicios.
             - id: ms-actividades
               uri: ${MS_ACTIVIDADES_URL:http://localhost:8081}
               predicates:
                 - Path=/api/actividades/**,/api/espacios/**,/api/ejercicios/**
               filters:
                 - StripPrefix=1
+            # Clases, inscripciones, estados e historial.
             - id: ms-clases
               uri: ${MS_CLASES_URL:http://localhost:8082}
               predicates:
                 - Path=/api/clases/**,/api/inscripciones/**
               filters:
                 - StripPrefix=1
+            # Pronóstico del clima y simulación para la demo.
             - id: ms-clima
               uri: ${MS_CLIMA_URL:http://localhost:8083}
               predicates:
                 - Path=/api/clima/**
               filters:
                 - StripPrefix=1
+            # Contactos (vinculación con Telegram) y estado de los avisos.
             - id: ms-notificaciones
               uri: ${MS_NOTIFICACIONES_URL:http://localhost:8084}
               predicates:
@@ -56,15 +90,18 @@ spring:
               filters:
                 - StripPrefix=1
 
+# ---- Actuator ----
+# Expone solo /actuator/health (¿está vivo el gateway?). Lo usa el healthcheck de Docker.
 management:
   endpoints:
     web:
       exposure:
         include: health
 
-# Swagger UI unificado: http://localhost:8080/swagger-ui.html
+# ---- Swagger UI unificado: http://localhost:8080/swagger-ui.html ----
 # Cada entrada es la documentación OpenAPI de un microservicio, que el gateway busca en
 # /docs/<servicio> (ver DocumentacionGatewayConfig). Desde ahí, "Try it out" llama a /api/...
+# Arriba a la derecha de la página se elige qué microservicio ver.
 springdoc:
   api-docs:
     path: /v3/api-docs

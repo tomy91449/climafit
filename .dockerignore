@@ -1,7 +1,15 @@
+# Archivos y carpetas que Docker NO copia al construir las imágenes.
+# Así el build es más rápido y no se cuelan cosas que no corresponden.
+
+# Resultados de compilaciones locales (cada imagen compila de cero).
 **/target
+# Configuración del IDE (IntelliJ).
 **/.idea
 **/*.iml
+# Historial de git.
 .git
+# Contraseñas y token del bot: NUNCA dentro de una imagen. Docker Compose los pasa como variables.
 .env
+# Documentación y colección de Postman: no hacen falta para correr los servicios.
 docs
 postman

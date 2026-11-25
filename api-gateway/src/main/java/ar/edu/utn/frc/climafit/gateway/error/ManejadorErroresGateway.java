@@ -1,5 +1,6 @@
 package ar.edu.utn.frc.climafit.gateway.error;
 
+import ar.edu.utn.frc.climafit.commons.error.CodigosError;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler;
@@ -25,6 +26,11 @@ import java.util.concurrent.TimeoutException;
  *   <li>cualquier otra cosa -> 500 ERROR_INTERNO, sin exponer el detalle.</li>
  * </ul>
  * Corre antes que el manejador por defecto de Spring Boot (orden -1).
+ * <p>
+ * Explicado simple: es la "red de seguridad" del gateway. Si al reenviar un pedido algo sale mal
+ * (por ejemplo, ms-clases está apagado), en vez de devolver un error técnico confuso, responde un
+ * 503 claro: "El servicio ms-clases no está disponible. Intentá de nuevo en unos minutos". Así una
+ * falla de un microservicio no rompe todo el sistema: los demás siguen funcionando.
  */
 @Component
 @Order(-2)
@@ -38,11 +44,14 @@ public class ManejadorErroresGateway implements ErrorWebExceptionHandler {
         this.respuestas = respuestas;
     }
 
+    /** Spring llama a este método cada vez que un pedido termina en error dentro del gateway. */
     @Override
     public Mono<Void> handle(ServerWebExchange exchange, Throwable ex) {
+        // Si ya se empezó a mandar la respuesta, no se puede cambiar.
         if (exchange.getResponse().isCommitted()) {
             return Mono.error(ex);
         }
+        // Caso 1: no se pudo hablar con el microservicio (apagado, no responde, tardó demasiado) -> 503.
         if (esFallaDeConexion(ex)) {
             String servicio = servicioDestino(exchange);
             log.warn("{} {} -> {} no disponible: {}", exchange.getRequest().getMethod(),
@@ -50,14 +59,17 @@ public class ManejadorErroresGateway implements ErrorWebExceptionHandler {
             return respuestas.escribir(exchange, HttpStatus.SERVICE_UNAVAILABLE, CodigosError.SERVICIO_NO_DISPONIBLE,
                     "El servicio " + servicio + " no está disponible. Intentá de nuevo en unos minutos");
         }
+        // Caso 2: un error con código HTTP conocido (404, 405, 502...).
         if (ex instanceof ResponseStatusException rse) {
             return porStatus(exchange, rse);
         }
+        // Caso 3: cualquier otra cosa -> 500, sin mostrar detalles internos al cliente (quedan en el log).
         log.error("Error inesperado en el gateway en {}", exchange.getRequest().getPath(), ex);
         return respuestas.escribir(exchange, HttpStatus.INTERNAL_SERVER_ERROR, CodigosError.ERROR_INTERNO,
                 "Ocurrió un error inesperado");
     }
 
+    /** Traduce un código HTTP a la respuesta de error de ClimaFit. */
     private Mono<Void> porStatus(ServerWebExchange exchange, ResponseStatusException ex) {
         int status = ex.getStatusCode().value();
         return switch (status) {
@@ -95,6 +107,7 @@ public class ManejadorErroresGateway implements ErrorWebExceptionHandler {
         return false;
     }
 
+    /** Nombre del microservicio al que iba el pedido (el "id" de la ruta en application.yml). */
     private static String servicioDestino(ServerWebExchange exchange) {
         Route ruta = exchange.getAttribute(ServerWebExchangeUtils.GATEWAY_ROUTE_ATTR);
         return ruta != null ? ruta.getId() : "solicitado";

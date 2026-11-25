@@ -921,7 +921,9 @@ erDiagram
   - propagación del correlation id;
   - traducción de errores de conexión a `ServicioNoDisponibleException`.
 
-**Servicios que la usan:** ms-actividades, ms-clases, ms-clima y ms-notificaciones (los cuatro microservicios funcionales). El API Gateway no la usa porque está construido sobre Spring WebFlux (reactivo) y la librería está pensada para servicios servlet. Su seguridad se configura en el propio gateway.
+**Servicios que la usan:**
+- ms-actividades, ms-clases, ms-clima y ms-notificaciones (los cuatro microservicios funcionales), con todas sus autoconfiguraciones.
+- El API Gateway, para interpretar los roles y responder los errores igual que los microservicios: usa `Roles`, `KeycloakRolesConverter`, `ErrorResponse` y `CodigosError`. Como está construido sobre Spring WebFlux (reactivo), excluye `spring-boot-starter-web` de la dependencia (Spring Cloud Gateway no arranca con Spring MVC en el classpath). Las autoconfiguraciones servlet de la librería no se activan en una aplicación reactiva, y la del cliente HTTP se excluye porque el gateway no llama a otros servicios por su cuenta. Sus filtros reactivos (Security Filter, correlation id, bloqueo de rutas internas) se configuran en el propio gateway.
 
 **Mecanismo de distribución.**
 - Es un proyecto Maven independiente (`climafit-commons/`) que se instala en el repositorio local con `mvn clean install`.

@@ -1,6 +1,6 @@
 package ar.edu.utn.frc.climafit.gateway.seguridad;
 
-import ar.edu.utn.frc.climafit.gateway.error.CodigosError;
+import ar.edu.utn.frc.climafit.commons.error.CodigosError;
 import ar.edu.utn.frc.climafit.gateway.error.RespuestasError;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -15,6 +15,14 @@ import reactor.core.publisher.Mono;
 import java.util.Locale;
 
 /**
+ * Filtro que esconde las rutas internas. Es el SEGUNDO control por el que pasa cada pedido
+ * (después de {@code CorrelationIdFilter} y antes de la seguridad).
+ * <p>
+ * Explicado simple: los microservicios tienen direcciones {@code /internal/...} que solo usan entre ellos
+ * (por ejemplo, ms-clases le pide a ms-notificaciones que mande un aviso). Esas direcciones no tienen que
+ * poder usarse desde Postman ni desde internet. Este filtro las hace "invisibles": responde 404, como si
+ * no existieran.
+ * <p>
  * Trusted zone (propuesta, secciones 06 y 10.1): las rutas {@code /internal/**} solo se llaman
  * entre microservicios, dentro de la red de Docker y con token de servicio. Desde afuera no existen.
  * <p>
@@ -26,6 +34,9 @@ import java.util.Locale;
  *   <li>si alguno es {@code .} o {@code ..} -> 400 DATOS_INVALIDOS (no se aceptan rutas relativas).</li>
  * </ul>
  * Corre antes que el Security Filter: la respuesta es la misma con token o sin token.
+ * <p>
+ * {@code @Component} = Spring lo crea solo. {@code @Order} = en qué posición corre entre los filtros
+ * (cuanto más chico el número, antes corre).
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 1)
@@ -39,9 +50,11 @@ public class BloqueoRutasInternasFilter implements WebFilter {
         this.respuestas = respuestas;
     }
 
+    /** Se ejecuta con cada pedido que entra al gateway. */
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, WebFilterChain chain) {
         boolean rutaRelativa = false;
+        // Recorre la dirección pedida parte por parte: /api/clima/modo -> "api", "clima", "modo".
         for (PathContainer.Element elemento : exchange.getRequest().getPath().pathWithinApplication().elements()) {
             if (!(elemento instanceof PathContainer.PathSegment segmento)) {
                 continue;
@@ -62,6 +75,7 @@ public class BloqueoRutasInternasFilter implements WebFilter {
             return respuestas.escribir(exchange, HttpStatus.BAD_REQUEST, CodigosError.DATOS_INVALIDOS,
                     "La ruta no puede contener segmentos relativos");
         }
+        // Todo bien: el pedido sigue al próximo control (la seguridad).
         return chain.filter(exchange);
     }
 }
