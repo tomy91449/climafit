@@ -447,18 +447,18 @@ config:
 ---
 %% C2 - Diagrama de Contenedores (C4) - ClimaFit
 flowchart LR
-  usuarios["<b>Usuarios</b><br/>[Personas]<br/><br/>Alumno, Profesor, Administrador<br/>(cliente: Postman / Bruno)"]
+  usuarios["<b>Usuarios</b><br/>[Personas]<br/><br/>Alumno, Profesor, Administrador<br/>(cliente: Postman / Swagger UI)"]
 
-  subgraph sistema["ClimaFit Backend [Sistema - Docker Compose]"]
-    gateway["<b>API Gateway</b><br/>[Spring Cloud Gateway]<br/><br/>Punto de entrada único;<br/>Security Filter: valida JWT y rol por ruta;<br/>enruta y bloquea /internal/**"]
+  subgraph sistema["ClimaFit Backend [Sistema - Docker Compose · red interna]"]
+    gateway["<b>API Gateway</b><br/>[Java 21 · Spring Cloud Gateway (WebFlux) · puerto 8080]<br/><br/>Punto de entrada único;<br/>Security Filter: valida JWT y rol por ruta;<br/>enruta, bloquea /internal/** y agrega correlation id;<br/>Swagger UI unificado; 503 si un servicio no responde"]
     actividades["<b>ms-actividades</b><br/>[Java 21 · Spring Boot]<br/><br/>Tipos de actividad y criterios climáticos,<br/>espacios y ejercicios"]
     clases["<b>ms-clases</b><br/>[Java 21 · Spring Boot]<br/><br/>Clases, rutinas, inscripciones, estados,<br/>historial; orquesta evaluación y reprogramación<br/>(tarea programada)"]
     clima["<b>ms-clima</b><br/>[Java 21 · Spring Boot]<br/><br/>Consulta y cachea el pronóstico;<br/>evalúa criterios: APTA / EN_RIESGO / NO_APTA<br/>(perfil demo con escenarios simulados)"]
     notificaciones["<b>ms-notificaciones</b><br/>[Java 21 · Spring Boot]<br/><br/>Contactos y consentimiento,<br/>vinculación del chat con /start,<br/>envío por Telegram con reintentos,<br/>registro de notificaciones"]
-    commons[["<b>climafit-commons</b><br/>[JAR Maven]<br/><br/>Errores, seguridad, correlation id,<br/>cliente HTTP con timeout y reintento"]]
+    commons[["<b>climafit-commons</b><br/>[JAR Maven]<br/><br/>Formato de errores, roles y seguridad<br/>(cada microservicio vuelve a validar el JWT),<br/>correlation id, cliente HTTP con timeout,<br/>reintento y token de servicio"]]
     db[("<b>PostgreSQL</b><br/>[DBMS · contenedor postgres]<br/><br/>clases_db · notificaciones_db<br/>keycloak_db")]
     dbActividades[("<b>PostgreSQL actividades</b><br/>[DBMS · contenedor postgres-actividades]<br/><br/>actividades_db")]
-    keycloak["<b>Keycloak</b><br/>[Identity Provider · contenedor]<br/><br/>Realm climafit: usuarios, roles,<br/>clientes OIDC; emite JWT"]
+    keycloak["<b>Keycloak</b><br/>[Identity Provider · contenedor · puerto 8090]<br/><br/>Realm climafit: usuarios, roles,<br/>clientes OIDC; emite JWT"]
   end
 
   openmeteo["<b>Open-Meteo</b><br/>[API pública externa]<br/><br/>Pronóstico horario"]
@@ -491,6 +491,7 @@ flowchart LR
   clases -.->|"dependencia Maven"| commons
   clima -.->|"dependencia Maven"| commons
   notificaciones -.->|"dependencia Maven"| commons
+  gateway -.->|"dependencia Maven<br/>(roles y formato de error)"| commons
 
   classDef persona fill:#08427b,stroke:#052e56,color:#ffffff
   classDef contenedor fill:#438dd5,stroke:#2e6295,color:#ffffff
@@ -513,6 +514,8 @@ flowchart LR
 - Su Security Filter valida el JWT contra Keycloak (401 si falta o es inválido) y aplica reglas de rol por ruta y método (403).
 - No expone las rutas `/internal/**`.
 - Genera el `X-Correlation-Id` y publica el Swagger UI unificado.
+- Si un microservicio no responde o tarda más que el timeout, responde 503 `SERVICIO_NO_DISPONIBLE`.
+- Usa `climafit-commons` para los roles, la lectura de roles del JWT y el formato de error, igual que los microservicios.
 
 **ms-actividades** — Java 21, Spring Boot, Spring Data JPA
 - Catálogo del dominio: tipos de actividad con sus criterios climáticos, espacios con coordenadas y ejercicios (base y personalizados).
@@ -538,7 +541,7 @@ flowchart LR
 - Base: `notificaciones_db`.
 
 **climafit-commons** — JAR Maven
-- Librería propia usada por los cuatro microservicios: errores, seguridad, correlation id y cliente HTTP (ver Sección 09).
+- Librería propia usada por los cuatro microservicios (errores, seguridad, correlation id y cliente HTTP) y por el API Gateway (roles y formato de error). Ver Sección 09.
 - No es un contenedor en ejecución: es una dependencia empaquetada dentro de cada servicio.
 
 **PostgreSQL** — PostgreSQL 17, dos contenedores

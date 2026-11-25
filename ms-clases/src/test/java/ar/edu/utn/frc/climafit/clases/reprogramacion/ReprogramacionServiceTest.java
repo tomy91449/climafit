@@ -28,7 +28,6 @@ import ar.edu.utn.frc.climafit.clases.estado.CambioEstadoService;
 import ar.edu.utn.frc.climafit.clases.estado.EstadoClase;
 import ar.edu.utn.frc.climafit.clases.evaluacion.ResultadoEvaluacion;
 import ar.edu.utn.frc.climafit.clases.inscripcion.EstadoInscripcion;
-import ar.edu.utn.frc.climafit.clases.inscripcion.Inscripcion;
 import ar.edu.utn.frc.climafit.clases.inscripcion.InscripcionRepository;
 import ar.edu.utn.frc.climafit.commons.error.ServicioNoDisponibleException;
 import java.time.LocalDateTime;

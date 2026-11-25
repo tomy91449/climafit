@@ -122,7 +122,7 @@ class EvaluacionServiceTest {
 
         servicio.evaluarManual(c, "profe1");
 
-        ArgumentCaptor<List<String>> destinatarios = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<String>> destinatarios = ArgumentCaptor.captor();
         verify(aviso).avisar(any(), eq(TipoEvento.ALERTA_RIESGO), anyString(), destinatarios.capture());
         assertEquals(List.of("profe1"), destinatarios.getValue());
     }
