@@ -4,6 +4,10 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <!-- Para principiantes: este pom.xml describe la librería común. groupId + artifactId + version son
+         su "nombre completo"; con esos tres datos la piden los microservicios y el API Gateway en su
+         propio pom.xml (<dependency> climafit-commons 1.0.0).
+         packaging "jar": se empaqueta como librería, no es una aplicación (no tiene main ni puerto). -->
     <groupId>ar.edu.utn.frc.climafit</groupId>
     <artifactId>climafit-commons</artifactId>
     <version>1.0.0</version>
@@ -15,6 +19,7 @@
         trazabilidad (correlation id) y cliente HTTP entre servicios.
     </description>
 
+    <!-- Versiones: Java 21 y la misma versión de Spring Boot que usan los servicios (3.5.16). -->
     <properties>
         <java.version>21</java.version>
         <maven.compiler.release>21</maven.compiler.release>
@@ -22,6 +27,8 @@
         <spring-boot.version>3.5.16</spring-boot.version>
     </properties>
 
+    <!-- Como la librería no hereda de spring-boot-starter-parent, importa la "lista de versiones" de
+         Spring Boot. Así las dependencias de abajo no necesitan <version>: la toma de esta lista. -->
     <dependencyManagement>
         <dependencies>
             <dependency>
@@ -37,33 +44,41 @@
     <dependencies>
         <!-- Los cuatro microservicios necesitan web, validación, seguridad con JWT
              y cliente OAuth2 (token de servicio): llegan a través de la librería. -->
+        <!-- Spring MVC (servidor web servlet): ManejadorGlobalErrores, CorrelationIdFilter, RestClient.
+             El API Gateway la EXCLUYE en su pom.xml porque usa WebFlux y no pueden convivir. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
+        <!-- Validación de datos (@NotNull, @Valid...) y sus errores 400. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
+        <!-- Spring Security: reglas de acceso, 401 y 403. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
+        <!-- "Resource server": validar el JWT que emite Keycloak (firma, emisor y vencimiento). -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
         </dependency>
+        <!-- "OAuth2 client": pedirle a Keycloak el token de servicio (client credentials). -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-client</artifactId>
         </dependency>
 
+        <!-- Genera la descripción de las propiedades climafit.* para que el IDE las autocomplete en el yml. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
             <optional>true</optional>
         </dependency>
 
+        <!-- Solo para los tests (scope test): no viajan a los servicios que usan la librería. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -76,6 +91,8 @@
         </dependency>
     </dependencies>
 
+    <!-- Cómo se compila: Java 21. "parameters" guarda los nombres de los parámetros de los métodos
+         (los usa ManejadorGlobalErrores para decir qué parámetro falló). Surefire corre los tests. -->
     <build>
         <plugins>
             <plugin>

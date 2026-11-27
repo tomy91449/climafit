@@ -1,3 +1,11 @@
+# Para principiantes: Spring Boot lee este archivo en cada aplicación que tenga climafit-commons
+# y carga solas las configuraciones listadas abajo. Por eso los microservicios no tienen que escribir
+# nada para tener seguridad, errores, correlation id y cliente HTTP: alcanza con la dependencia.
+# Las tres primeras solo se activan en aplicaciones servlet (los microservicios), no en el gateway.
+#   Errores:      ManejadorGlobalErrores (JSON común de error)
+#   Seguridad:    validación del JWT de Keycloak, /internal/** solo SERVICIO, UsuarioActual
+#   Trazabilidad: filtro del X-Correlation-Id
+#   Http:         token de servicio y ClienteServicioFactory (el gateway la excluye en su application.yml)
 ar.edu.utn.frc.climafit.commons.config.ClimafitErroresAutoConfiguration
 ar.edu.utn.frc.climafit.commons.config.ClimafitSeguridadAutoConfiguration
 ar.edu.utn.frc.climafit.commons.config.ClimafitTrazabilidadAutoConfiguration

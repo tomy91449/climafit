@@ -476,7 +476,10 @@ flowchart LR
   clases -- "Criterios, espacio,<br/>compatibilidad de ejercicios<br/>[REST + JWT]" --> actividades
   clases -- "Evalúa ventanas horarias<br/>[REST + JWT, /internal]" --> clima
   clases -- "Solicita notificación de evento<br/>[REST + JWT, /internal]" --> notificaciones
-  clases -- "Token de servicio<br/>(client credentials)" --> keycloak
+  clases -- "Valida JWT [JWKS] y obtiene<br/>token de servicio (client credentials)" --> keycloak
+  actividades -- "Valida JWT<br/>[JWKS]" --> keycloak
+  clima -- "Valida JWT<br/>[JWKS]" --> keycloak
+  notificaciones -- "Valida JWT<br/>[JWKS]" --> keycloak
 
   actividades -- "JPA/JDBC" --> dbActividades
   clases -- "JPA/JDBC" --> db
@@ -556,6 +559,7 @@ flowchart LR
 - Usuarios → API Gateway: HTTP/JSON con `Authorization: Bearer <JWT>`.
 - Usuarios → Keycloak: obtención de token.
 - API Gateway → Keycloak: descarga de claves públicas (JWKS) para validar firmas.
+- Microservicios → Keycloak: cada uno descarga las mismas claves públicas (JWKS) y vuelve a validar el JWT. ms-clases además obtiene el token de servicio (client credentials) para llamar a los otros servicios.
 - API Gateway → microservicios: enrutamiento HTTP dentro de la red interna de Docker:
   - `/api/actividades`, `/api/espacios` y `/api/ejercicios` → ms-actividades.
   - `/api/clases` y `/api/inscripciones` → ms-clases.

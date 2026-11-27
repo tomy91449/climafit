@@ -6,6 +6,13 @@ import org.slf4j.MDC;
 /**
  * Identificador que acompaña a un pedido por todos los servicios que participan en él
  * (cabecera {@code X-Correlation-Id}). Permite seguir un proceso distribuido en los logs.
+ *
+ * <p>Para principiantes: cuando un profesor cancela una clase, el pedido pasa por el gateway,
+ * ms-clases y ms-notificaciones. Los tres escriben en sus logs con el mismo número, así se puede
+ * buscar ese número y ver todo lo que pasó con ese pedido, de punta a punta.
+ *
+ * <p>Recorrido: el gateway lo genera (o lo respeta si ya venía), CorrelationIdFilter lo guarda en el
+ * MDC de cada microservicio, y ClienteServicioFactory lo reenvía cuando un servicio llama a otro.
  */
 public final class CorrelationId {
 
@@ -15,6 +22,7 @@ public final class CorrelationId {
     /** Clave del MDC (la misma que lee {@link ErrorResponseFactory}). */
     public static final String CLAVE_MDC = ErrorResponseFactory.MDC_CORRELATION_ID;
 
+    // Constructor privado: solo constantes y métodos estáticos.
     private CorrelationId() {
     }
 

@@ -33,7 +33,10 @@ flowchart LR
   clases -- "Criterios, espacio,<br/>compatibilidad de ejercicios<br/>[REST + JWT]" --> actividades
   clases -- "Evalúa ventanas horarias<br/>[REST + JWT, /internal]" --> clima
   clases -- "Solicita notificación de evento<br/>[REST + JWT, /internal]" --> notificaciones
-  clases -- "Token de servicio<br/>(client credentials)" --> keycloak
+  clases -- "Valida JWT [JWKS] y obtiene<br/>token de servicio (client credentials)" --> keycloak
+  actividades -- "Valida JWT<br/>[JWKS]" --> keycloak
+  clima -- "Valida JWT<br/>[JWKS]" --> keycloak
+  notificaciones -- "Valida JWT<br/>[JWKS]" --> keycloak
 
   actividades -- "JPA/JDBC" --> dbActividades
   clases -- "JPA/JDBC" --> db
